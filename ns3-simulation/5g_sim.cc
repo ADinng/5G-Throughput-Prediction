@@ -139,9 +139,17 @@ int main(int argc, char *argv[])
     serverApps.Stop(Seconds(10.0));
     clientApps.Stop(Seconds(9.8));
 
+    // Enable NR module traces (PHY, MAC, RLC, PDCP, etc.)
+    nrHelper->EnableTraces();
 
     Simulator::Stop(Seconds(10.0));
     Simulator::Run();
+
+    // Print UDP server received packets for verification
+    Ptr<UdpServer> serverApp = serverApps.Get(0)->GetObject<UdpServer>();
+    uint64_t receivedPackets = serverApp->GetReceived();
+    std::cout << "UE 0 received UDP packets: " << receivedPackets << std::endl;
+    
     Simulator::Destroy();
     return 0;
 }
