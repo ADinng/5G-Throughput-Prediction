@@ -23,7 +23,7 @@
 using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("NRSimpleScenario_02");
 
-// 添加RRC状态变化回调函数
+
 void RrcStateChangeCallback(uint64_t imsi, uint16_t cellId, uint16_t rnti, NrUeRrc::State oldState, NrUeRrc::State newState)
 {
     std::cout << "UE RRC state changed: IMSI=" << imsi 
@@ -32,35 +32,6 @@ void RrcStateChangeCallback(uint64_t imsi, uint16_t cellId, uint16_t rnti, NrUeR
               << ", OldState=" << oldState 
               << ", NewState=" << newState << std::endl;
 }
-
-uint32_t numSinks;
-ApplicationContainer sinks;
-std::vector<int> lastTotalRx;
-std::ofstream throughputFile; 
-
-void CalculateThroughput(uint16_t inter)
-{
-    Time now = Simulator::Now();
-    for (uint32_t u = 0; u < numSinks; ++u)
-    {
-        Ptr<PacketSink> sink = StaticCast<PacketSink>(sinks.Get(u));
-        uint32_t idd = ((sinks.Get(u))->GetNode())->GetId();
-        
-        std::cout << "Checking UE " << idd << ":" << std::endl;
-        std::cout << "  - Total received packets: " << sink->GetTotalRx() << " bytes" << std::endl;
-        std::cout << "  - Last total received: " << lastTotalRx[u] << " bytes" << std::endl;
-        
-        double curRx = sink->GetTotalRx();
-        double cur = ((curRx - lastTotalRx[u]) * 8.0) / ((double)inter / 1000);
-        
-        std::cout << "  - Current throughput: " << cur << " bit/s" << std::endl;
-        
-        lastTotalRx[u] = curRx;
-    }
-    Simulator::Schedule(MilliSeconds(inter), &CalculateThroughput, inter);
-}
-
-
 
 int
 main(int argc, char* argv[])
@@ -407,7 +378,6 @@ main(int argc, char* argv[])
 
 
     std::cout << "Configuring and starting applications..." << std::endl;
-    numSinks = ueNodes.GetN();
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     {
         Ptr<Node> ueNode = ueNodes.Get(u);
@@ -418,9 +388,6 @@ main(int argc, char* argv[])
 
         UdpServerHelper dlPacketSinkHelper(dlPort);
         serverApps.Add(dlPacketSinkHelper.Install(ueNodes.Get(u)));
-        
-        sinks.Add(serverApps.Get(u));
-        lastTotalRx.push_back(0);
 
         UdpClientHelper dlClient(ueIpIface.GetAddress(u), dlPort);
         dlClient.SetAttribute("Interval", TimeValue(MicroSeconds(100)));

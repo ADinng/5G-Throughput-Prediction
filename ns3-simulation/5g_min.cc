@@ -23,31 +23,7 @@ NS_LOG_COMPONENT_DEFINE("NRSimpleScenario_01");
 uint32_t numSinks;
 ApplicationContainer sinks;
 std::vector<int> lastTotalRx;
-std::ofstream throughputFile;  // 添加文件流
-
-void CalculateThroughput(uint16_t inter)
-{
-    Time now = Simulator::Now();
-    for (uint32_t u = 0; u < numSinks; ++u)
-    {
-        Ptr<PacketSink> sink = StaticCast<PacketSink>(sinks.Get(u));
-        uint32_t idd = ((sinks.Get(u))->GetNode())->GetId();
-        
-        std::cout << "Checking UE " << idd << ":" << std::endl;
-        std::cout << "  - Total received packets: " << sink->GetTotalRx() << " bytes" << std::endl;
-        std::cout << "  - Last total received: " << lastTotalRx[u] << " bytes" << std::endl;
-        
-        double curRx = sink->GetTotalRx();
-        double cur = ((curRx - lastTotalRx[u]) * 8.0) / ((double)inter / 1000);
-        
-        std::cout << "  - Current throughput: " << cur << " bit/s" << std::endl;
-        
-        lastTotalRx[u] = curRx;
-    }
-    Simulator::Schedule(MilliSeconds(inter), &CalculateThroughput, inter);
-}
-
-
+std::ofstream throughputFile; 
 
 int
 main(int argc, char* argv[])
@@ -64,19 +40,6 @@ main(int argc, char* argv[])
     double hUT;          // user antenna height in meters
     double txPower = 40; // txPower
     enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
-
-    // CommandLine cmd(__FILE__);
-    // cmd.AddValue("scenario",
-    //              "The scenario for the simulation. Choose among 'RMa', 'UMa', 'UMi-StreetCanyon', "
-    //              "'InH-OfficeMixed', 'InH-OfficeOpen'.",
-    //              scenario);
-    // cmd.AddValue("frequency", "The central carrier frequency in Hz.", frequency);
-    // cmd.AddValue("mobility",
-    //              "If set to 1 UEs will be mobile, when set to 0 UE will be static. By default, "
-    //              "they are mobile.",
-    //              mobility);
-    // cmd.AddValue("logging", "If set to 0, log components will be disabled.", logging);
-    // cmd.Parse(argc, argv);
 
     // enable logging
     if (logging)
@@ -287,7 +250,6 @@ main(int argc, char* argv[])
     uint16_t dlPort = 1234;
     ApplicationContainer clientApps;
     ApplicationContainer serverApps;
-    numSinks = ueNodes.GetN();
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     {
         Ptr<Node> ueNode = ueNodes.Get(u);
@@ -298,21 +260,12 @@ main(int argc, char* argv[])
 
         UdpServerHelper dlPacketSinkHelper(dlPort);
         serverApps.Add(dlPacketSinkHelper.Install(ueNodes.Get(u)));
-        
-        std::cout << "Adding sink for UE " << u << std::endl;
-        sinks.Add(serverApps.Get(u));
-        lastTotalRx.push_back(0);
-        std::cout << "Current numSinks = " << sinks.GetN() << std::endl;
 
         UdpClientHelper dlClient(ueIpIface.GetAddress(u), dlPort);
         dlClient.SetAttribute("Interval", TimeValue(MicroSeconds(100)));
         //dlClient.SetAttribute("MaxPackets", UintegerValue(10));
         dlClient.SetAttribute("MaxPackets", UintegerValue(0xFFFFFFFF)); // continue sending
         dlClient.SetAttribute("PacketSize", UintegerValue(1500));
-        
-        std::cout << "Creating UDP client for UE " << u 
-                  << " with IP " << ueIpIface.GetAddress(u) 
-                  << " and port " << dlPort << std::endl;
         
         clientApps.Add(dlClient.Install(remoteHost));
     }
@@ -330,36 +283,9 @@ main(int argc, char* argv[])
     nrHelper->EnableTraces();
 
 
-    // add timer to calculate throughput
-    Simulator::Schedule(Seconds(0.4), &CalculateThroughput, 100);
-
 
     Simulator::Stop(Seconds(simTime));
     Simulator::Run();
-
-    // Ptr<UdpServer> serverApp = serverApps.Get(0)->GetObject<UdpServer>();
-    // uint64_t receivedPackets = serverApp->GetReceived();
-
-    // // print final statistics
-    // for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
-    // {
-    //     Ptr<PacketSink> sink = StaticCast<PacketSink>(sinks.Get(u));
-    //     double totalRx = sink->GetTotalRx();
-    //     double avgThroughput = (totalRx * 8.0) / simTime;
-    //     std::cout << "UE " << u << " Total Received: " << totalRx << " bytes" << std::endl;
-    //     std::cout << "UE " << u << " Average Throughput: " << avgThroughput << " bit/s" << std::endl;
-    // }
-
-
-
-    // if (receivedPackets == 10)
-    // {
-    //     return EXIT_SUCCESS;
-    // }
-    // else
-    // {
-    //     return EXIT_FAILURE;
-    // }
     return EXIT_SUCCESS;
 }
 
