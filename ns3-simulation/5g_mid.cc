@@ -407,6 +407,7 @@ main(int argc, char* argv[])
 
 
     std::cout << "Configuring and starting applications..." << std::endl;
+    numSinks = ueNodes.GetN();
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     {
         Ptr<Node> ueNode = ueNodes.Get(u);

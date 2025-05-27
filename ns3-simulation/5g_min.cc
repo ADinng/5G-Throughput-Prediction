@@ -287,6 +287,7 @@ main(int argc, char* argv[])
     uint16_t dlPort = 1234;
     ApplicationContainer clientApps;
     ApplicationContainer serverApps;
+    numSinks = ueNodes.GetN();
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     {
         Ptr<Node> ueNode = ueNodes.Get(u);
