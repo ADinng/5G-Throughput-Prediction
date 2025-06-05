@@ -19,10 +19,45 @@
 #include <fstream>
 #include "ns3/string.h"
 #include "ns3/callback.h"
+#include "ns3/hexagonal-grid-scenario-helper.h"
+#include "ns3/realistic-beamforming-algorithm.h"
+
 
 using namespace ns3;
-NS_LOG_COMPONENT_DEFINE("NRSimpleScenario_gNb");
+NS_LOG_COMPONENT_DEFINE("NRSimpleScenario_one_gNb");
 // NS_LOG_COMPONENT_DEFINE("NrMacSchedulerCQIManagement");
+
+
+
+// Callback for UE connection established
+void 
+NotifyConnectionEstablishedUe (std::string context, 
+                                uint64_t imsi, 
+                                uint16_t cellId, 
+                                uint16_t rnti)
+{
+    std::cout << Simulator::Now().GetSeconds() << " " << context
+              << " UE IMSI " << imsi
+              << ": connected to CellId " << cellId
+              << " with RNTI " << rnti 
+              << std::endl;
+}
+
+
+// Callback for UE connection released
+void 
+NotifyConnectionReleasedUe (std::string context, 
+                            uint64_t imsi, 
+                            uint16_t cellId, 
+                            uint16_t rnti)
+{
+    std::cout << Simulator::Now().GetSeconds() << " " << context
+              << " UE IMSI " << imsi
+              << ": released from CellId " << cellId
+              << " with RNTI " << rnti 
+              << std::endl;
+}
+
 
 void RrcStateChangeCallback(uint64_t imsi, uint16_t cellId, uint16_t rnti, NrUeRrc::State oldState, NrUeRrc::State newState)
 {
@@ -53,9 +88,20 @@ void CalculateThroughput(uint16_t inter)
         lastTotalRx[u] = curRx;
     }
     //Simulator::Schedule(MilliSeconds(inter), &CalculateThroughput, inter);
-    Simulator::Schedule(Seconds(1.0), &CalculateThroughput, inter);
+    //Simulator::Schedule(Seconds(1.0), &CalculateThroughput, inter);
+    Simulator::Schedule (MilliSeconds (inter), &CalculateThroughput,inter);
 }
 
+
+
+
+static void
+CourseChange(std::string foo, Ptr<const MobilityModel> mobility)
+{
+    Time now = Simulator::Now();
+    Vector pos = mobility->GetPosition(); // Get position
+    std::cout << "Time: " << now.GetSeconds() << " " << foo << " POS: x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
+}
 
 
 void CqiTrace(std::string context, uint16_t cellId, uint16_t rnti, double rsrp, double sinr, bool isServingCell, uint8_t componentCarrierId)
@@ -88,6 +134,7 @@ main(int argc, char* argv[])
     uint32_t nGnbSites = 1* nGnbSitesX;
     double interSiteDistance =  100;  
     double ueDensity = 0.0005;  //20
+    // double ueDensity = 0.0009;  
 
 
     uint32_t numBearersPerUe = 1;  
@@ -130,11 +177,12 @@ main(int argc, char* argv[])
         // LogComponentEnable ("NrRlcUm", LOG_LEVEL_LOGIC);
         // LogComponentEnable ("NrPdcp", LOG_LEVEL_INFO);
         // LogComponentEnable("PacketSink", LOG_LEVEL_ALL);
-        LogComponentEnable("NrMacSchedulerCQIManagement", LOG_LEVEL_INFO);
+        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_LEVEL_INFO);
         // LogComponentEnable("NrMacSchedulerUeInfo", LOG_LEVEL_INFO);
         // LogComponentEnable("NrAmc", LOG_LEVEL_INFO);
         // LogComponentEnable("NrGnbMac", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUeMac", LOG_LEVEL_INFO);
+        // LogComponentEnable("NrUePhy", LOG_LEVEL_ALL);
 
     }
 
@@ -142,8 +190,8 @@ main(int argc, char* argv[])
      * Default values for the simulation. We are progressively removing all
      * the instances of SetDefault, but we need it for legacy code (LTE)
      */
-    Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(999999999));
-
+    // Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(999999999));
+    Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024));
     // set mobile device and base station antenna heights in meters, according to the chosen
     // scenario
     if (scenario == "RMa")
@@ -156,8 +204,8 @@ main(int argc, char* argv[])
     {
         hBS = 25;
         hUT = 1.5;
-        // scenarioEnum = BandwidthPartInfo::UMa;
-        scenarioEnum = BandwidthPartInfo::UMa_LoS;
+        scenarioEnum = BandwidthPartInfo::UMa;
+        // scenarioEnum = BandwidthPartInfo::UMa_LoS;
     }
     else if (scenario == "UMi-StreetCanyon")
     {
@@ -213,26 +261,34 @@ main(int argc, char* argv[])
     gnbNodes.Create(nGnbSites);
     ueNodes.Create(nUes);
 
-    // //position the base stations
-    // Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
-    // gnbPositionAlloc->Add(Vector(0.0, 0.0, hBS));
-    // gnbPositionAlloc->Add(Vector(0.0, 200.0, hBS));
-
+    //position the base stations
     Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
-    for (uint32_t i = 0; i < nGnbSites; ++i)
-    {
-        uint32_t x = i % nGnbSitesX;
-        uint32_t y = i / nGnbSitesX;
-        double posX = x * interSiteDistance;
-        double posY = y * interSiteDistance;
-        gnbPositionAlloc->Add(Vector(posX, posY, hBS));
-        NS_LOG_UNCOND("gNB " << i << " at position (" << posX << ", " << posY << ", " << hBS << ")");
-    }
+    gnbPositionAlloc->Add(Vector(0.0, 0.0, hBS));
+    // gnbPositionAlloc->Add(Vector(0.0, 200.0, hBS));
+    Vector pos = gnbPositionAlloc->GetNext();
+    std::cout << "gNB position from allocator: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
+
+
+
+    // Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
+    // for (uint32_t i = 0; i < nGnbSites; ++i)
+    // {
+    //     uint32_t x = i % nGnbSitesX;
+    //     uint32_t y = i / nGnbSitesX;
+    //     double posX = x * interSiteDistance;
+    //     double posY = y * interSiteDistance;
+    //     gnbPositionAlloc->Add(Vector(posX, posY, hBS));
+    //     NS_LOG_UNCOND("gNB " << i << " at position (" << posX << ", " << posY << ", " << hBS << ")");
+    // }
+
+    // HexagonalGridScenarioHelper gridScenario;
+    // gridScenario.SetSectorization(HexagonalGridScenarioHelper::SINGLE);
+    // uint32_t numOuterRings = 1;
+    // gridScenario.SetNumRings(numOuterRings);
+    // gridScenario.SetScenarioParameters(scenario);
 
     MobilityHelper gnbMobility;
     gnbMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-
-
     gnbMobility.SetPositionAllocator(gnbPositionAlloc);
     gnbMobility.Install(gnbNodes);
 
@@ -308,14 +364,17 @@ main(int argc, char* argv[])
 
     // Create NR simulation helpers
     Ptr<NrPointToPointEpcHelper> nrEpcHelper = CreateObject<NrPointToPointEpcHelper>();
-    Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
+    //Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
+    Ptr<RealisticBeamformingHelper> realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
     
     nrHelper->SetPathlossAttribute("ShadowingEnabled", BooleanValue(true));
+    nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(100)));
     // nrHelper->SetChannelConditionModelAttribute("LinkO2iConditionToAntennaHeight",BooleanValue(linkO2iConditionToAntennaHeight));
-    // nrHelper->SetChannelConditionModelAttribute("O2iThreshold", DoubleValue(o2iThreshold));
-    // nrHelper->SetChannelConditionModelAttribute("O2iLowLossThreshold",DoubleValue(o2iLowLossThreshold));
-    nrHelper->SetBeamformingHelper(idealBeamformingHelper);
+    nrHelper->SetChannelConditionModelAttribute("O2iThreshold", DoubleValue(0.5));
+    nrHelper->SetChannelConditionModelAttribute("O2iLowLossThreshold",DoubleValue(0.5));
+    //nrHelper->SetBeamformingHelper(idealBeamformingHelper);
+    nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
     nrHelper->SetEpcHelper(nrEpcHelper);
 
     BandwidthPartInfoPtrVector allBwps;
@@ -339,21 +398,28 @@ main(int argc, char* argv[])
     allBwps = CcBwpCreator::GetAllBwps({band});
 
     // Configure ideal beamforming method
-    idealBeamformingHelper->SetAttribute("BeamformingMethod",
-                                         TypeIdValue(DirectPathBeamforming::GetTypeId()));
+    // idealBeamformingHelper->SetAttribute("BeamformingMethod",
+    //                                      TypeIdValue(DirectPathBeamforming::GetTypeId()));
+
+
+    realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
+
+
+    nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
+
 
     // Configure scheduler
     nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
 
     // Antennas for the UEs
-    nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(2));
-    nrHelper->SetUeAntennaAttribute("NumColumns", UintegerValue(4));
+    nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(1));
+    nrHelper->SetUeAntennaAttribute("NumColumns", UintegerValue(1));
     nrHelper->SetUeAntennaAttribute("AntennaElement",
                                     PointerValue(CreateObject<IsotropicAntennaModel>()));
 
     // Antennas for the gNbs
-    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(8));
-    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(8));
+    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(1));
+    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(1));
     nrHelper->SetGnbAntennaAttribute("AntennaElement",
                                      PointerValue(CreateObject<IsotropicAntennaModel>()));
 
@@ -460,12 +526,17 @@ main(int argc, char* argv[])
     nrHelper->AttachToClosestGnb(ueNetDev, gnbNetDev);
     std::cout << "UEs attached successfully" << std::endl;
     
+    Time startTime = Seconds(startTimeSeconds->GetValue());
 
     std::cout << "Starting server applications..." << std::endl;
-    serverApps.Start(Seconds(0.4));
+    //serverApps.Start(Seconds(0.4));
+    serverApps.Start(startTime);
+
     std::cout << "Starting client applications..." << std::endl;
-    clientApps.Start(Seconds(0.4));
-    
+    //clientApps.Start(Seconds(0.4));
+    clientApps.Start(startTime);
+
+
     serverApps.Stop(Seconds(simTime));
     clientApps.Stop(Seconds(simTime - 0.2));
 
@@ -476,11 +547,21 @@ main(int argc, char* argv[])
     //                 MakeCallback(&CqiTrace)
     // );
 
+
+    // Register callback for UE RRC connection established event
+    Config::Connect("/NodeList/*/DeviceList/*/NrUeRrc/ConnectionEstablished",
+                    MakeCallback(&NotifyConnectionEstablishedUe));
+
+    Config::Connect("/NodeList/*/DeviceList/*/$ns3::NrGnbNetDevice/NrGnbRrc/NotifyConnectionRelease",
+                    MakeCallback(&NotifyConnectionReleasedUe));
+
+    // mobility callbacks
+    Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
+                   MakeCallback(&CourseChange));
+
     // UE measurements callback
-    // Config::Connect("/NodeList/*/DeviceList/*/$ns3::NrUeNetDevice/ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
-    //                MakeBoundCallback(&ReportUeMeasurementsCallback));
-
-
+    Config::Connect("/NodeList/*/DeviceList/*/$ns3::NrUeNetDevice/ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
+                   MakeBoundCallback(&ReportUeMeasurementsCallback));
 
     Simulator::Schedule (Seconds (0.4), &CalculateThroughput,100);
 
