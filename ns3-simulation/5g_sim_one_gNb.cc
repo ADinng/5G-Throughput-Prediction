@@ -162,7 +162,10 @@ main(int argc, char* argv[])
     // set mobility model: steady, gauss
     std::string mobilityType = "steady";
 
-
+    // SRS Periodicity (has to be at least greater than the number of UEs per gNB)
+    uint16_t srsPeriodicity = 160; // 80
+    Config::SetDefault("ns3::NrGnbRrc::SrsPeriodicity", UintegerValue(srsPeriodicity));
+    
     enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
 
     // enable logging
