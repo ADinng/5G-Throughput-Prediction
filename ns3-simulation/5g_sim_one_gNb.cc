@@ -151,6 +151,11 @@ main(int argc, char* argv[])
     double hUT;          // user antenna height in meters
     double txPower = 46; // txPower
 
+
+    // Add application type flags
+    // bool useUdp = false;  // if true, use UDP; if false, use TCP
+    // bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
+
     // double o2iThreshold = 0;
     // double o2iLowLossThreshold =1.0; // shows the percentage of low losses. Default value is 100% low
     // bool linkO2iConditionToAntennaHeight = false;
@@ -165,7 +170,7 @@ main(int argc, char* argv[])
     // SRS Periodicity (has to be at least greater than the number of UEs per gNB)
     uint16_t srsPeriodicity = 160; // 80
     Config::SetDefault("ns3::NrGnbRrc::SrsPeriodicity", UintegerValue(srsPeriodicity));
-    
+
     enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
 
     // enable logging
@@ -294,6 +299,7 @@ main(int argc, char* argv[])
     gnbMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     gnbMobility.SetPositionAllocator(gnbPositionAlloc);
     gnbMobility.Install(gnbNodes);
+    BuildingsHelper::Install(gnbNodes);
 
 
    // Configuring user Mobility
@@ -364,6 +370,8 @@ main(int argc, char* argv[])
         ueMobility.SetPositionAllocator(uePositionAlloc);
         ueMobility.Install(ueNodes);
     }
+
+    BuildingsHelper::Install(ueNodes);
 
     // Create NR simulation helpers
     Ptr<NrPointToPointEpcHelper> nrEpcHelper = CreateObject<NrPointToPointEpcHelper>();
@@ -487,8 +495,17 @@ main(int argc, char* argv[])
 
     std::cout << "Configuring and starting applications..." << std::endl;
     Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable>();
-    startTimeSeconds->SetAttribute("Min", DoubleValue(0));
-    startTimeSeconds->SetAttribute("Max", DoubleValue(1));
+
+    if (useUdp)
+    {
+        startTimeSeconds->SetAttribute("Min", DoubleValue(0));
+        startTimeSeconds->SetAttribute("Max", DoubleValue(1));
+    }
+    else
+    {
+        startTimeSeconds->SetAttribute("Min", DoubleValue(0.100));
+        startTimeSeconds->SetAttribute("Max", DoubleValue(0.110));
+    }
 
     numSinks = ueNodes.GetN();
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
