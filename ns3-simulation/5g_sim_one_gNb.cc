@@ -153,8 +153,8 @@ main(int argc, char* argv[])
 
 
     // Add application type flags
-    bool useUdp = true;  // if true, use UDP; if false, use TCP
-    // bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
+    bool useUdp = false;  // if true, use UDP; if false, use TCP
+    bool onOffApp = false; // if true, use On-Off application; if false, use BulkSend
 
     // double o2iThreshold = 0;
     // double o2iLowLossThreshold =1.0; // shows the percentage of low losses. Default value is 100% low
@@ -198,6 +198,10 @@ main(int argc, char* argv[])
      * Default values for the simulation. We are progressively removing all
      * the instances of SetDefault, but we need it for legacy code (LTE)
      */
+
+    Config::SetDefault("ns3::UdpClient::Interval", TimeValue (MilliSeconds (1)));
+    Config::SetDefault("ns3::UdpClient::MaxPackets", UintegerValue(100000000));
+    Config::SetDefault("ns3::UdpClient::PacketSize", UintegerValue(1024));
     // Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(999999999));
     Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024));
     // set mobile device and base station antenna heights in meters, according to the chosen
@@ -555,10 +559,10 @@ main(int argc, char* argv[])
             if (useUdp)
             {
                 UdpClientHelper dlClient(ueIpIface.GetAddress(u), dlPort);
-                dlClient.SetAttribute("Interval", TimeValue(MicroSeconds(1000))); 
-                dlClient.SetAttribute("MaxPackets", UintegerValue(100000000));
-                // dlClient.SetAttribute("MaxPackets", UintegerValue(0xFFFFFFFF)); // continue sending
-                dlClient.SetAttribute("PacketSize", UintegerValue(1024)); 
+                // dlClient.SetAttribute("Interval", TimeValue(MicroSeconds(1000))); 
+                // dlClient.SetAttribute("MaxPackets", UintegerValue(100000000));
+                // // dlClient.SetAttribute("MaxPackets", UintegerValue(0xFFFFFFFF)); // continue sending
+                // dlClient.SetAttribute("PacketSize", UintegerValue(1024)); 
                 clientApps.Add(dlClient.Install(remoteHost));
                 PacketSinkHelper dlPacketSinkHelper("ns3::UdpSocketFactory",
                     InetSocketAddress(Ipv4Address::GetAny(), dlPort));
@@ -566,6 +570,18 @@ main(int argc, char* argv[])
                 // sinks.Add(serverApps.Get(u));
                 sinks.Add(serverApps);
                 lastTotalRx.push_back(0);  
+            }
+            else
+            {
+                if(onOffApp == false){
+                    BulkSendHelper dlClient("ns3::TcpSocketFactory", InetSocketAddress(ueIpIface.GetAddress(u), dlPort));
+                    dlClient.SetAttribute("MaxBytes", UintegerValue(0));
+                    clientApps.Add(dlClient.Install(remoteHost));
+                    PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
+                    serverApps.Add(dlPacketSinkHelper.Install(ue));
+                    sinks.Add(serverApps);
+                    lastTotalRx.push_back(0);
+                }
             }
             
             std::cout << "UE " << u << " configured with IP " 
