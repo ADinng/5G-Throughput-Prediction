@@ -153,7 +153,7 @@ main(int argc, char* argv[])
 
 
     // Add application type flags
-    // bool useUdp = false;  // if true, use UDP; if false, use TCP
+    bool useUdp = true;  // if true, use UDP; if false, use TCP
     // bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
 
     // double o2iThreshold = 0;
@@ -506,6 +506,9 @@ main(int argc, char* argv[])
     // ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueNetDev));
     ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
 
+    std::cout << "Attaching UEs to gNBs..." << std::endl;
+    nrHelper->AttachToClosestGnb(ueNetDev, gnbNetDev);
+    std::cout << "UEs attached successfully" << std::endl;
 
 
 
@@ -513,67 +516,79 @@ main(int argc, char* argv[])
     ApplicationContainer clientApps;
     ApplicationContainer serverApps;
     uint16_t dlPort = 10000;  
-    // uint16_t ulPort = 20000;  
+    uint16_t ulPort = 20000;  
 
     std::cout << "Configuring and starting applications..." << std::endl;
     Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable>();
 
-
-    startTimeSeconds->SetAttribute("Min", DoubleValue(0));
-    startTimeSeconds->SetAttribute("Max", DoubleValue(1));
-
-    numSinks = ueNodes.GetN();
-    for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
+    if (useUdp)
     {
-        Ptr<Node> ueNode = ueNodes.Get(u);
+        startTimeSeconds->SetAttribute("Min", DoubleValue(0));
+        startTimeSeconds->SetAttribute("Max", DoubleValue(1));
+    }
+    else
+    {
+        startTimeSeconds->SetAttribute("Min", DoubleValue(0.100));
+        startTimeSeconds->SetAttribute("Max", DoubleValue(0.110));
+    }
+
+    // numSinks = ueNodes.GetN();
+    numSinks = ues.GetN();
+    // for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
+    for (uint32_t u = 0; u < ues.GetN(); ++u)
+    {
+        // Ptr<Node> ueNode = ueNodes.Get(u);
+        Ptr<Node> ue = ues.Get(u);
         // Set the default gateway for the UE
         Ptr<Ipv4StaticRouting> ueStaticRouting =
-            ipv4RoutingHelper.GetStaticRouting(ueNode->GetObject<Ipv4>());
+            ipv4RoutingHelper.GetStaticRouting(ue->GetObject<Ipv4>());
         ueStaticRouting->SetDefaultRoute(nrEpcHelper->GetUeDefaultGatewayAddress(), 1);
 
         for (uint32_t b = 0; b < numBearersPerUe; ++b)
         {
             ++dlPort;
+            ++ulPort;
 
-            PacketSinkHelper dlPacketSinkHelper("ns3::UdpSocketFactory",
-                                InetSocketAddress(Ipv4Address::GetAny(), dlPort));
-            serverApps.Add(dlPacketSinkHelper.Install(ueNodes.Get(u)));
-            sinks.Add(serverApps.Get(u));
-            lastTotalRx.push_back(0);
+            ApplicationContainer clientApps;
+            ApplicationContainer serverApps;
 
-            UdpClientHelper dlClient(ueIpIface.GetAddress(u), dlPort);
-            dlClient.SetAttribute("Interval", TimeValue(MicroSeconds(1000))); 
-            dlClient.SetAttribute("MaxPackets", UintegerValue(100000000));
-            // dlClient.SetAttribute("MaxPackets", UintegerValue(0xFFFFFFFF)); // continue sending
-            dlClient.SetAttribute("PacketSize", UintegerValue(1024)); 
+            if (useUdp)
+            {
+                UdpClientHelper dlClient(ueIpIface.GetAddress(u), dlPort);
+                dlClient.SetAttribute("Interval", TimeValue(MicroSeconds(1000))); 
+                dlClient.SetAttribute("MaxPackets", UintegerValue(100000000));
+                // dlClient.SetAttribute("MaxPackets", UintegerValue(0xFFFFFFFF)); // continue sending
+                dlClient.SetAttribute("PacketSize", UintegerValue(1024)); 
+                clientApps.Add(dlClient.Install(remoteHost));
+                PacketSinkHelper dlPacketSinkHelper("ns3::UdpSocketFactory",
+                    InetSocketAddress(Ipv4Address::GetAny(), dlPort));
+                serverApps.Add(dlPacketSinkHelper.Install(ue));
+                // sinks.Add(serverApps.Get(u));
+                sinks.Add(serverApps);
+                lastTotalRx.push_back(0);  
+            }
             
-            clientApps.Add(dlClient.Install(remoteHost));
-
             std::cout << "UE " << u << " configured with IP " 
                       << ueIpIface.GetAddress(u) << " and port " << dlPort << std::endl;
             
+            Time startTime = Seconds(startTimeSeconds->GetValue());
+
+            // std::cout << "Starting server applications..." << std::endl;
+            //serverApps.Start(Seconds(0.4));
+            serverApps.Start(startTime);
+
+            // std::cout << "Starting client applications..." << std::endl;
+            //clientApps.Start(Seconds(0.4));
+            clientApps.Start(startTime);
 
         }
     }
 
-
-    std::cout << "Attaching UEs to gNBs..." << std::endl;
-    nrHelper->AttachToClosestGnb(ueNetDev, gnbNetDev);
-    std::cout << "UEs attached successfully" << std::endl;
     
-    Time startTime = Seconds(startTimeSeconds->GetValue());
+    Simulator::Stop(Seconds(simTime));
 
-    std::cout << "Starting server applications..." << std::endl;
-    //serverApps.Start(Seconds(0.4));
-    serverApps.Start(startTime);
-
-    std::cout << "Starting client applications..." << std::endl;
-    //clientApps.Start(Seconds(0.4));
-    clientApps.Start(startTime);
-
-
-    serverApps.Stop(Seconds(simTime));
-    clientApps.Stop(Seconds(simTime - 0.2));
+    // serverApps.Stop(Seconds(simTime));
+    // clientApps.Stop(Seconds(simTime - 0.2));
 
 
     nrHelper->EnableTraces();
@@ -602,7 +617,6 @@ main(int argc, char* argv[])
 
 
 
-    Simulator::Stop(Seconds(simTime));
 
     std::cout << "Starting simulation..." << std::endl;
     Simulator::Run();
