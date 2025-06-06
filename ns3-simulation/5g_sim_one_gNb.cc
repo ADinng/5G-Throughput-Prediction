@@ -458,12 +458,22 @@ main(int argc, char* argv[])
         DynamicCast<NrUeNetDevice>(*it)->UpdateConfig();
     }
 
+
+
+
     // create the internet and install the IP stack on the UEs
     // get SGW/PGW and create a single RemoteHost
-    Ptr<Node> pgw = nrEpcHelper->GetPgwNode();
+    Ipv4Address remoteHostAddr;
+    NodeContainer ues;
+    Ipv4StaticRoutingHelper ipv4RoutingHelper;
+    Ipv4InterfaceContainer ueIpIface;
+    Ptr<Node> remoteHost;
+    NetDeviceContainer ueDevs;
+
+
     NodeContainer remoteHostContainer;
     remoteHostContainer.Create(1);
-    Ptr<Node> remoteHost = remoteHostContainer.Get(0);
+    remoteHost = remoteHostContainer.Get(0);
     InternetStackHelper internet;
     internet.Install(remoteHostContainer);
 
@@ -472,20 +482,32 @@ main(int argc, char* argv[])
     p2ph.SetDeviceAttribute("DataRate", DataRateValue(DataRate("100Gb/s")));
     p2ph.SetDeviceAttribute("Mtu", UintegerValue(2500));
     p2ph.SetChannelAttribute("Delay", TimeValue(Seconds(0.010)));
+    Ptr<Node> pgw = nrEpcHelper->GetPgwNode();
     NetDeviceContainer internetDevices = p2ph.Install(pgw, remoteHost);
 
     Ipv4AddressHelper ipv4h;
     ipv4h.SetBase("1.0.0.0", "255.0.0.0");
     Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign(internetDevices);
-    Ipv4StaticRoutingHelper ipv4RoutingHelper;
+    // Ipv4StaticRoutingHelper ipv4RoutingHelper;
+    // in this container, interface 0 is the pgw, 1 is the remoteHost
+    remoteHostAddr = internetIpIfaces.GetAddress(1);
+
 
     Ptr<Ipv4StaticRouting> remoteHostStaticRouting =
         ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
     remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
-    internet.Install(ueNodes);
+    ues.Add(ueNodes);
+    ueDevs.Add(ueNetDev);
 
-    Ipv4InterfaceContainer ueIpIface;
-    ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueNetDev));
+    // internet.Install(ueNodes);
+    internet.Install(ues);
+
+    // Ipv4InterfaceContainer ueIpIface;
+    // ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueNetDev));
+    ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
+
+
+
 
     // assign IP address to UEs, and install UDP downlink applications
     ApplicationContainer clientApps;
@@ -496,16 +518,9 @@ main(int argc, char* argv[])
     std::cout << "Configuring and starting applications..." << std::endl;
     Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable>();
 
-    if (useUdp)
-    {
-        startTimeSeconds->SetAttribute("Min", DoubleValue(0));
-        startTimeSeconds->SetAttribute("Max", DoubleValue(1));
-    }
-    else
-    {
-        startTimeSeconds->SetAttribute("Min", DoubleValue(0.100));
-        startTimeSeconds->SetAttribute("Max", DoubleValue(0.110));
-    }
+
+    startTimeSeconds->SetAttribute("Min", DoubleValue(0));
+    startTimeSeconds->SetAttribute("Max", DoubleValue(1));
 
     numSinks = ueNodes.GetN();
     for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
