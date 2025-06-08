@@ -129,10 +129,12 @@ main(int argc, char* argv[])
 {
     uint32_t nGnbSitesX = 1;        
     uint32_t nGnbSites = 1* nGnbSitesX;
-    double interSiteDistance =  100;  
-    double ueDensity = 0.0005;  //20
-    // double ueDensity = 0.0009;  
-
+    double interSiteDistance =  250;  
+    double ueDensity = 0.00008;  //20
+    // double ueDensity = 0.00016;  //40
+    // double ueDensity = 0.00024; //60
+    // double ueDensity = 0.00032; //80
+    // double ueDensity = 0.0004; //100
 
     uint32_t numBearersPerUe = 1;  
 
@@ -148,9 +150,8 @@ main(int argc, char* argv[])
     double hUT;          // user antenna height in meters
     double txPower = 46; // txPower
 
-
     // Add application type flags
-    bool useUdp = false;  // if true, use UDP; if false, use TCP
+    bool useUdp = true;  // if true, use UDP; if false, use TCP
     bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
 
 
@@ -167,6 +168,14 @@ main(int argc, char* argv[])
 
     enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
 
+
+    CommandLine cmd(__FILE__);
+    cmd.AddValue("ueDensity", "UE density in the simulation area", ueDensity);
+    cmd.AddValue("simTime", "Simulation time in seconds", simTime);
+    cmd.AddValue("useUdp", "Use UDP protocol if true, TCP otherwise", useUdp);
+    cmd.AddValue("onOffApp", "Use OnOff application if true, Bulk otherwise", onOffApp);
+    cmd.Parse(argc, argv);
+    
     // enable logging
     if (logging)
     {
@@ -623,8 +632,8 @@ main(int argc, char* argv[])
     // serverApps.Stop(Seconds(simTime));
     // clientApps.Stop(Seconds(simTime - 0.2));
 
-
     nrHelper->EnableTraces();
+
 
     // Config::Connect("/NodeList/*/DeviceList/*/ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
     //                 MakeCallback(&CqiTrace)
