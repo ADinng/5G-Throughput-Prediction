@@ -84,8 +84,7 @@ void CalculateThroughput(uint16_t inter)
         //std::cout <<"Time: "<< now.GetSeconds () <<" UE "<<u<<" Average Throughput: " << avg << " bit/s" << std::endl;
         lastTotalRx[u] = curRx;
     }
-    //Simulator::Schedule(MilliSeconds(inter), &CalculateThroughput, inter);
-    //Simulator::Schedule(Seconds(1.0), &CalculateThroughput, inter);
+
     Simulator::Schedule (MilliSeconds (inter), &CalculateThroughput,inter);
 }
 
@@ -131,6 +130,7 @@ main(int argc, char* argv[])
     uint32_t nGnbSites = 1* nGnbSitesX;
     double interSiteDistance =  250;  
     double ueDensity = 0.00008;  //20
+    // double ueDensity = 0.00008;  //20
     // double ueDensity = 0.00016;  //40
     // double ueDensity = 0.00024; //60
     // double ueDensity = 0.00032; //80
@@ -175,7 +175,7 @@ main(int argc, char* argv[])
     cmd.AddValue("useUdp", "Use UDP protocol if true, TCP otherwise", useUdp);
     cmd.AddValue("onOffApp", "Use OnOff application if true, Bulk otherwise", onOffApp);
     cmd.Parse(argc, argv);
-    
+
     // enable logging
     if (logging)
     {
@@ -295,12 +295,6 @@ main(int argc, char* argv[])
     //     gnbPositionAlloc->Add(Vector(posX, posY, hBS));
     //     NS_LOG_UNCOND("gNB " << i << " at position (" << posX << ", " << posY << ", " << hBS << ")");
     // }
-
-    // HexagonalGridScenarioHelper gridScenario;
-    // gridScenario.SetSectorization(HexagonalGridScenarioHelper::SINGLE);
-    // uint32_t numOuterRings = 1;
-    // gridScenario.SetNumRings(numOuterRings);
-    // gridScenario.SetScenarioParameters(scenario);
 
     MobilityHelper gnbMobility;
     gnbMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
@@ -427,7 +421,7 @@ main(int argc, char* argv[])
 
 
     // Configure scheduler
-    nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
+    // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
 
     // Antennas for the UEs
     nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(1));
@@ -615,12 +609,8 @@ main(int argc, char* argv[])
             nrHelper->ActivateDedicatedEpsBearer(ueDevs.Get(u), bearer, lowLatTft);
     
             Time startTime = Seconds(startTimeSeconds->GetValue());
-            // std::cout << "Starting server applications..." << std::endl;
-            //serverApps.Start(Seconds(0.4));
+            std::cout<< Simulator::Now ().GetSeconds () << " " << " UE IMSI " << u << "startTime: "<<startTime << std::endl;
             serverApps.Start(startTime);
-
-            // std::cout << "Starting client applications..." << std::endl;
-            //clientApps.Start(Seconds(0.4));
             clientApps.Start(startTime);
 
         }
