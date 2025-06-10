@@ -23,6 +23,7 @@ parser.add_argument('--opath', '-op',
 
 
 num_ue= 20
+simTime = 59 
 
 # Expt parameters
 args = parser.parse_args()
@@ -32,7 +33,8 @@ def copy_logs(logs_location, save_path):
                    os.path.isfile(os.path.join(logs_location, f))]
     os.system("mkdir -p %s"%save_path)
     for trace_file in trace_files:
-        if "Stats" in trace_file:
+        # if "Stats" in trace_file:
+        if "Stats" in trace_file or "RxPacketTrace" in trace_file:
             os.system("cp %s %s"%(trace_file, save_path))
             # os.system("rm %s"%(trace_file))
             
@@ -66,8 +68,15 @@ def parse_pdcp(path_to_logs, out_path):
     # os.system("python3 pdcp.py -f %s -op %s"%(pdcp_log, pdcp_out_l)) 
     os.system("python3 scratch/scripts/pdcp.py -f %s -op %s"%(pdcp_log, pdcp_out_l))                                                                    
 
+
+def parse_phy(path_to_logs, out_path):
+    phy_log = os.path.join(path_to_logs, "RxPacketTrace.txt") 
+    phy_out_l = os.path.join(out_path, "RAW/")
+    os.system("mkdir -p %s"%phy_out_l)
+    os.system("python3 scratch/scripts/phy.py -nu %d -f %s -op %s"%(num_ue, phy_log, phy_out_l))    
+
 def create_competing_metrics(metric, input_path, out_path):
-    os.system("python3 network_metric.py -nu 60 -ms %s -p %s -op %s"%(metric,
+    os.system("python3 scratch/scripts/network_metric.py -nu 60 -ms %s -p %s -op %s"%(metric,
                                                                       input_path,
                                                                      out_path))
             
@@ -86,24 +95,25 @@ if __name__ == "__main__":
         # parse_mcs(args.output_path + "/logs/", args.output_path)
         parse_CQI(args.output_path + "/logs", args.output_path)
         # parse_RSRP_SINR(args.output_path+"/logs/", args.output_path)
-        # parse_pdcp(args.output_path+"/logs/", args.output_path)
+        parse_pdcp(args.output_path+"/logs/", args.output_path)
+        parse_phy(args.output_path + "/logs", args.output_path)
         
-        # create_competing_metrics("SINR", args.output_path+"/RAW/",
-        #                          args.output_path+"/CMetrics/")
+        create_competing_metrics("SINR", args.output_path+"/RAW/",
+                                 args.output_path+"/CMetrics/")
         
-        # create_competing_metrics("CQI", args.output_path+"/RAW/", args.output_path+"/CMetrics/")
-        # create_competing_metrics("THR", args.output_path+"/RAW/", args.output_path+"/CMetrics/")
-        # create_competing_metrics("RSRP", args.output_path+"/RAW/",
-        #                          args.output_path+"/CMetrics/")
+        create_competing_metrics("CQI", args.output_path+"/RAW/", args.output_path+"/CMetrics/")
+        create_competing_metrics("THR", args.output_path+"/RAW/", args.output_path+"/CMetrics/")
+        create_competing_metrics("RSRP", args.output_path+"/RAW/",
+                                 args.output_path+"/CMetrics/")
                                  
                                  
-        # os.system("rm %s/RAW/CELL_*.csv"%args.output_path)
+        os.system("rm %s/RAW/CELL_*.csv"%args.output_path)
         # #os.system("rm %s/RAW/UE_0-*.csv"%args.output_path)
-        # os.system("mv %s/CMetrics/* %s/RAW/"%(args.output_path, args.output_path))
-        # os.system("mv %s/CMetrics %s/Positions"%(args.output_path, args.output_path))
-        # os.system("mv %s/RAW/UE_*-POSITION.csv %s/Positions/"%(args.output_path, args.output_path))
+        os.system("mv %s/CMetrics/* %s/RAW/"%(args.output_path, args.output_path))
+        os.system("mv %s/CMetrics %s/Positions"%(args.output_path, args.output_path))
+        os.system("mv %s/RAW/UE_*-POSITION.csv %s/Positions/"%(args.output_path, args.output_path))
         
-        # os.system("python3 newAveraging.py -p %s/RAW/ -op %s/averaged/1s/ -il 1.0"%(args.output_path, args.output_path))
+        os.system("python3 scratch/scripts/newAveraging.py -p %s/RAW/ -op %s/averaged/1s/ -il 1.0"%(args.output_path, args.output_path))
         
-        # os.system("python3 combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu 60 -td 999 -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path))
+        os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path,num_ue, simTime))
         

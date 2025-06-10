@@ -6,6 +6,7 @@ from collections import defaultdict
 from argparse import ArgumentParser
 import csv
 import pandas as pd
+import json
 
 '''Script for parsing UE performance metrics (throughput, CQI, SNR...)
 
@@ -125,6 +126,7 @@ def maping_cell_and_rnti_imsi(rnti,cellid,imsi):
     '''
     
     _cellid_and_rnti_to_imsi[cellid][rnti] = imsi
+    # print(f"Establish mappings: cell_id={cellid}, rnti={rnti}, imsi={imsi}")
 #open("./random/no-op.txt")
 ue_counter = 0
 #infile = open("/home/darijo/workspace/ns-allinone-3.25/ns-3.25/random_static_210-no-op.txt")
@@ -158,7 +160,7 @@ for line in infile:
             #print new_data.group(1)
             #comp_ues= ';'.join(str(x) for x in _cellid_and_rnti_to_imsi[cell_id].values() if x!=ue_imsi)
             
-            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-CQI.csv",["Time","CQI","Ach.Rate","CellID_CQI"],new_data.group(1),new_data.group(5),new_data.group(4),cell_id)
+            # save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-CQI.csv",["Time","CQI","Ach.Rate","CellID_CQI"],new_data.group(1),new_data.group(5),new_data.group(4),cell_id)
 
         elif re.search(REG_TBLER,line):
             new_data = re.search(REG_TBLER,line)
@@ -244,9 +246,10 @@ for line in infile:
             ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
             #comp_ues= ';'.join(str(x) for x in _cellid_and_rnti_to_imsi[cell_id].values() if x!=ue_imsi)
             save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRQ_RSRP.csv",["Time","RSRP","RSRQ","CellID_RSRQ"],new_data.group(1),new_data.group(5),new_data.group(6),cell_id)
-        elif re.search(REG_END_HAND,line):
 
-            
+            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRP.csv",["Time","RSRP","CellID_RSRP"],new_data.group(1),new_data.group(5),cell_id)
+
+        elif re.search(REG_END_HAND,line):
             
             new_data = re.search(REG_END_HAND,line)
 
@@ -267,13 +270,13 @@ for line in infile:
             _imsi_connected[int(new_data.group(3))] = int(new_data.group(2))
             #print line
 
-pf_cqi = pd.DataFrame(cell_cqi)
-fullname = os.path.join(args.output_path,"CELL_CQI.csv")
-pf_cqi.to_csv(fullname,sep=';')
+# pf_cqi = pd.DataFrame(cell_cqi)
+# fullname = os.path.join(args.output_path,"CELL_CQI.csv")
+# pf_cqi.to_csv(fullname,sep=';')
 
-#pf_rsrp = pd.DataFrame(cell_rsrp)
-#fullname = os.path.join(args.output_path,"CELL_RSRP.csv")
-#pf_rsrp.to_csv(fullname,sep=';')
+pf_rsrp = pd.DataFrame(cell_rsrp)
+fullname = os.path.join(args.output_path,"CELL_RSRP.csv")
+pf_rsrp.to_csv(fullname,sep=';')
 
 #pf_rsrq = pd.DataFrame(cell_rsrq)
 #fullname = os.path.join(args.output_path,"CELL_RSRQ.csv")
@@ -284,6 +287,18 @@ fullname = os.path.join(args.output_path,"CELL_THR.csv")
 pf_thr.to_csv(fullname,sep=';')
 
 
+def save_mapping():
+    mapping_data = {
+        'cellid_and_rnti_to_imsi': {
+            str(cell_id): {str(rnti): imsi for rnti, imsi in rnti_dict.items()}
+            for cell_id, rnti_dict in _cellid_and_rnti_to_imsi.items()
+        }
+    }
+    with open('ue_mapping.json', 'w') as f:
+        json.dump(mapping_data, f)
+
+
+save_mapping() 
 
 #print _cellid_and_rnti_to_imsi[12]
 #print ue_counter
