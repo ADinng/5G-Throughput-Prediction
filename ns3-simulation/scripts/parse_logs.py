@@ -76,7 +76,7 @@ def parse_phy(path_to_logs, out_path):
     os.system("python3 scratch/scripts/phy.py -nu %d -f %s -op %s"%(num_ue, phy_log, phy_out_l))    
 
 def create_competing_metrics(metric, input_path, out_path):
-    os.system("python3 scratch/scripts/network_metric.py -nu 60 -ms %s -p %s -op %s"%(metric,
+    os.system("python3 scratch/scripts/network_metric.py -nu %d -ms %s -p %s -op %s"%(num_ue, metric,
                                                                       input_path,
                                                                      out_path))
             
@@ -98,13 +98,10 @@ if __name__ == "__main__":
         parse_pdcp(args.output_path+"/logs/", args.output_path)
         parse_phy(args.output_path + "/logs", args.output_path)
         
-        create_competing_metrics("SINR", args.output_path+"/RAW/",
-                                 args.output_path+"/CMetrics/")
-        
+        create_competing_metrics("SINR", args.output_path+"/RAW/",args.output_path+"/CMetrics/")
         create_competing_metrics("CQI", args.output_path+"/RAW/", args.output_path+"/CMetrics/")
         create_competing_metrics("THR", args.output_path+"/RAW/", args.output_path+"/CMetrics/")
-        create_competing_metrics("RSRP", args.output_path+"/RAW/",
-                                 args.output_path+"/CMetrics/")
+        create_competing_metrics("RSRP", args.output_path+"/RAW/", args.output_path+"/CMetrics/")
                                  
                                  
         os.system("rm %s/RAW/CELL_*.csv"%args.output_path)
@@ -115,5 +112,5 @@ if __name__ == "__main__":
         
         os.system("python3 scratch/scripts/newAveraging.py -p %s/RAW/ -op %s/averaged/1s/ -il 1.0"%(args.output_path, args.output_path))
         
-        os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path,num_ue, simTime))
+        # os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path,num_ue, simTime))
         

@@ -76,7 +76,6 @@ load_mapping()
 
 cell_cqi = defaultdict(lambda : defaultdict(list))
 cell_snr = defaultdict(lambda : defaultdict(list))
-cell_rsrp = defaultdict(lambda : defaultdict(list))
 
 def save_metric_to_file(_path,_file_name,header,*values):
  
@@ -124,8 +123,12 @@ for line in infile:
             # sinr
             save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-SINR.csv",["Time","SINR","CellID_SINR"],content.group(1),content.group(15),cell_id)
 
-            # nr
+            # cqi
             save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-CQI.csv",["Time","CQI","Ach.Rate","CellID_CQI"],content.group(1),content.group(16),achievableRate,cell_id)
+
+
+            # tbler
+            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-TBLER.csv",["Time","TBLER","CellID_BLER"],content.group(1),content.group(18),cell_id)
 
 
 

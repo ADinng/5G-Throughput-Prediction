@@ -170,7 +170,8 @@ for line in infile:
 
             ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
             #comp_ues= ';'.join(str(x) for x in _cellid_and_rnti_to_imsi[cell_id].values() if x!=ue_imsi)
-            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-TBLER.csv",["Time","TBLER","CellID_BLER"],new_data.group(1),new_data.group(4),cell_id)
+
+            #save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-TBLER.csv",["Time","TBLER","CellID_BLER"],new_data.group(1),new_data.group(4),cell_id)
         
         elif re.search(REG_CELL_BUFFERS,line):
             new_data = re.search(REG_CELL_BUFFERS,line)
@@ -241,13 +242,16 @@ for line in infile:
             
             # cell_rsrp[cell_id][new_data.group(1)].append(np.around(10*log10(float(new_data.group(5)),decimals=2))) #lte
             # # RSRP is already in dBm (log scale), no need to apply 10*log10 conversion.
-            cell_rsrp[cell_id][new_data.group(1)].append(np.around(float(new_data.group(5)),decimals=2)) #nr
+
+            rsrp_temp = float(np.around(float(new_data.group(5)),decimals=2))
+            cell_rsrp[cell_id][new_data.group(1)].append(rsrp_temp) 
+        
             cell_rsrq[cell_id][new_data.group(1)].append(new_data.group(6))
             ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
             #comp_ues= ';'.join(str(x) for x in _cellid_and_rnti_to_imsi[cell_id].values() if x!=ue_imsi)
-            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRQ_RSRP.csv",["Time","RSRP","RSRQ","CellID_RSRQ"],new_data.group(1),new_data.group(5),new_data.group(6),cell_id)
+            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRQ_RSRP.csv",["Time","RSRP","RSRQ","CellID_RSRQ"],new_data.group(1),rsrp_temp,new_data.group(6),cell_id)
 
-            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRP.csv",["Time","RSRP","CellID_RSRP"],new_data.group(1),new_data.group(5),cell_id)
+            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRP.csv",["Time","RSRP","CellID_RSRP"],new_data.group(1),rsrp_temp,cell_id)
 
         elif re.search(REG_END_HAND,line):
             

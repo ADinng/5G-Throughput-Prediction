@@ -66,9 +66,9 @@ def summarize_parameters(df,metric,ue_prefix):
      
         cqi_curr = float(row[2])
         cellid = str(row[-1])
-        print (cellid)
-        print (ue_prefix)
-        print (new_pdf._get_value(curr_time,cellid))
+        # print (cellid)
+        # print (ue_prefix)
+        # print (new_pdf._get_value(curr_time,cellid))
         dd = ''.join(new_pdf._get_value(curr_time,cellid)[1:-1].split()) 
         fin = list(map(float,dd.split(',')))
         fin = np.around(fin,decimals=3).tolist()
