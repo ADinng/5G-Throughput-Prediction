@@ -172,6 +172,10 @@ main(int argc, char* argv[])
     double hUT;          // user antenna height in meters
     double txPower = 46; // txPower
 
+    // double o2iThreshold = 0;
+    // double o2iLowLossThreshold =1.0; // shows the percentage of low losses. Default value is 100% low
+    // bool linkO2iConditionToAntennaHeight = false;
+
     // Add application type flags
     bool useUdp = false;  // if true, use UDP; if false, use TCP
     bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
@@ -189,7 +193,6 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::NrGnbRrc::SrsPeriodicity", UintegerValue(srsPeriodicity));
 
     enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
-
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("ueDensity", "UE density in the simulation area", ueDensity);
@@ -425,12 +428,12 @@ main(int argc, char* argv[])
     nrHelper->SetPathlossAttribute("ShadowingEnabled", BooleanValue(true));
     nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(100)));
     // nrHelper->SetChannelConditionModelAttribute("LinkO2iConditionToAntennaHeight",BooleanValue(linkO2iConditionToAntennaHeight));
-    nrHelper->SetChannelConditionModelAttribute("O2iThreshold", DoubleValue(0.5));
-    nrHelper->SetChannelConditionModelAttribute("O2iLowLossThreshold",DoubleValue(0.5));
+    // nrHelper->SetChannelConditionModelAttribute("O2iThreshold", DoubleValue(0.5));
+    // nrHelper->SetChannelConditionModelAttribute("O2iLowLossThreshold",DoubleValue(0.5));
+    Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
     //nrHelper->SetBeamformingHelper(idealBeamformingHelper);
     nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
     nrHelper->SetEpcHelper(nrEpcHelper);
-
     BandwidthPartInfoPtrVector allBwps;
     CcBwpCreator ccBwpCreator;
     const uint8_t numCcPerBand = 1; // have a single band, and that band is composed of a single component carrier
@@ -455,11 +458,11 @@ main(int argc, char* argv[])
     // idealBeamformingHelper->SetAttribute("BeamformingMethod",
     //                                      TypeIdValue(DirectPathBeamforming::GetTypeId()));
 
-
+    RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
     realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
-
-
     nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
+    nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
+    nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
 
 
     // Configure scheduler
@@ -467,14 +470,14 @@ main(int argc, char* argv[])
     nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaPF::GetTypeId());
 
     // Antennas for the UEs
-    nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(2));
-    nrHelper->SetUeAntennaAttribute("NumColumns", UintegerValue(4));
+    nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(1));
+    nrHelper->SetUeAntennaAttribute("NumColumns", UintegerValue(1));
     nrHelper->SetUeAntennaAttribute("AntennaElement",
                                     PointerValue(CreateObject<IsotropicAntennaModel>()));
 
     // Antennas for the gNbs
-    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(8));
-    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(8));
+    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(1));
+    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(1));
     nrHelper->SetGnbAntennaAttribute("AntennaElement",
                                      PointerValue(CreateObject<IsotropicAntennaModel>()));
 
