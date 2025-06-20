@@ -142,16 +142,16 @@ ReportUeMeasurementsCallback(
                 << std::endl;
 }
 
-
 int
 main(int argc, char* argv[])
 {
     uint32_t nGnbSitesX = 1;        
     uint32_t nGnbSites = 1* nGnbSitesX;
-    // double interSiteDistance =  250;  
-    double interSiteDistance =  200; 
-    // double ueDensity = 0.00008;  //20
-    double ueDensity = 0.00009;  //20
+    double interSiteDistance =  40;  
+    // double interSiteDistance =  200; 
+    // double ueDensity = 0.000004;  //20
+    // double ueDensity = 0.0005;  //100-20
+    double ueDensity = 0.0001;  //100-4
     // double ueDensity = 0.00008;  //20
     // double ueDensity = 0.00016;  //40
     // double ueDensity = 0.00024; //60
@@ -164,9 +164,9 @@ main(int argc, char* argv[])
     double frequency = 28e9;      // central frequency
     double bandwidth = 100e6;     // bandwidth
     //double mobility = false;      // whether to enable mobility
-    double simTime = 60;           // in second
+    double simTime = 50;           // in second
     //double speed = 1;             // in m/s for walking UT.
-    bool logging = false; // whether to enable logging from the simulation, another option is by
+    bool logging = true; // whether to enable logging from the simulation, another option is by
                          // exporting the NS_LOG environment variable
     double hBS;          // base station antenna height in meters
     double hUT;          // user antenna height in meters
@@ -174,7 +174,7 @@ main(int argc, char* argv[])
 
     // Add application type flags
     bool useUdp = false;  // if true, use UDP; if false, use TCP
-    bool onOffApp = false; // if true, use On-Off application; if false, use BulkSend
+    bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
 
 
     /// Minimum speed value of macro UE with random waypoint model [m/s].
@@ -210,13 +210,30 @@ main(int argc, char* argv[])
         // LogComponentEnable ("NrRlcUm", LOG_LEVEL_LOGIC);
         // LogComponentEnable ("NrPdcp", LOG_LEVEL_INFO);
         // LogComponentEnable("PacketSink", LOG_LEVEL_ALL);
-        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_LEVEL_INFO);
+        // LogComponentEnable("OnOffApplication", LOG_LEVEL_INFO);
+        // LogComponentEnable("NrMacSchedulerTdmaPF", LOG_LEVEL_INFO);
         // LogComponentEnable("NrMacSchedulerUeInfo", LOG_LEVEL_INFO);
         // LogComponentEnable("NrGnbMac", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUeMac", LOG_LEVEL_INFO);
-        // LogComponentEnable("NrUePhy", LOG_LEVEL_ALL);
-        LogComponentEnable("OnOffApplication", LOG_LEVEL_INFO);
+        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_LEVEL_INFO);
+        // LogComponentEnable("TcpSocketBase", LOG_LEVEL_INFO);
 
+        // Add detailed HARQ logging
+        // LogComponentEnable("NrHarqPhy", LOG_LEVEL_ALL);
+        // LogComponentEnable("NrGnbPhy", LOG_LEVEL_ALL);
+        // LogComponentEnable("NrUePhy", LOG_LEVEL_ALL);
+        
+        // // Add MCS and CQI related logging
+        // LogComponentEnable("NrAmc", LOG_LEVEL_ALL);
+        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_LEVEL_ALL);
+        
+        // // Add RLC and PDCP logging for buffer status
+        // LogComponentEnable("NrRlcUm", LOG_LEVEL_ALL);
+        // LogComponentEnable("NrPdcp", LOG_LEVEL_ALL);
+        
+        // // Add channel quality logging
+        // LogComponentEnable("NrSpectrumPhy", LOG_LEVEL_ALL);
+        // LogComponentEnable("NrInterference", LOG_LEVEL_ALL);
     }
 
     /*
@@ -239,7 +256,7 @@ main(int argc, char* argv[])
     }
     else if (scenario == "UMa")
     {
-        hBS = 25;
+        hBS = 30;
         hUT = 1.5;
         scenarioEnum = BandwidthPartInfo::UMa;
         // scenarioEnum = BandwidthPartInfo::UMa_LoS;
@@ -291,6 +308,9 @@ main(int argc, char* argv[])
     NS_LOG_UNCOND("Number of gNBs: " << nGnbSites);
     NS_LOG_UNCOND("UE distribution area: x[" << ueBox.xMin << "," << ueBox.xMax 
                   << "], y[" << ueBox.yMin << "," << ueBox.yMax << "]");
+    
+    NS_LOG_UNCOND("UE distribution area: x[" << ueBox.xMin << "," << ueBox.xMax 
+                  << "], y[" << ueBox.yMin << "," << ueBox.yMax << "]");
 
     // create base stations and mobile terminals
     NodeContainer gnbNodes;
@@ -300,8 +320,8 @@ main(int argc, char* argv[])
 
     //position the base stations
     Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
-    gnbPositionAlloc->Add(Vector(0.0, 0.0, hBS));
-    // gnbPositionAlloc->Add(Vector(0.0, 200.0, hBS));
+    // gnbPositionAlloc->Add(Vector(0.0, 0.0, hBS));
+    gnbPositionAlloc->Add(Vector((ueBox.xMin+ueBox.xMax)/2, (ueBox.yMin+ueBox.yMax)/2, hBS));
     Vector pos = gnbPositionAlloc->GetNext();
     std::cout << "gNB position from allocator: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
 
@@ -443,17 +463,18 @@ main(int argc, char* argv[])
 
 
     // Configure scheduler
-    nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
+    // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
+    nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaPF::GetTypeId());
 
     // Antennas for the UEs
-    nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(1));
-    nrHelper->SetUeAntennaAttribute("NumColumns", UintegerValue(1));
+    nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(2));
+    nrHelper->SetUeAntennaAttribute("NumColumns", UintegerValue(4));
     nrHelper->SetUeAntennaAttribute("AntennaElement",
                                     PointerValue(CreateObject<IsotropicAntennaModel>()));
 
     // Antennas for the gNbs
-    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(1));
-    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(1));
+    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(8));
+    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(8));
     nrHelper->SetGnbAntennaAttribute("AntennaElement",
                                      PointerValue(CreateObject<IsotropicAntennaModel>()));
 
@@ -530,7 +551,12 @@ main(int argc, char* argv[])
     ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
 
     std::cout << "Attaching UEs to gNBs..." << std::endl;
-    nrHelper->AttachToClosestGnb(ueNetDev, gnbNetDev);
+    // nrHelper->AttachToClosestGnb(ueNetDev, gnbNetDev);
+
+    for (uint32_t i=0; i < ueDevs.GetN(); i++)
+    {
+        nrHelper->AttachToGnb(ueDevs.Get(i),gnbNetDev.Get(0));
+    }
     std::cout << "UEs attached successfully" << std::endl;
 
 
@@ -549,11 +575,15 @@ main(int argc, char* argv[])
     {
         startTimeSeconds->SetAttribute("Min", DoubleValue(0));
         startTimeSeconds->SetAttribute("Max", DoubleValue(1));
+        startTimeSeconds->SetStream(randomStream++);
     }
     else
     {
+        // startTimeSeconds->SetAttribute("Min", DoubleValue(0.100));
         startTimeSeconds->SetAttribute("Min", DoubleValue(0.100));
-        startTimeSeconds->SetAttribute("Max", DoubleValue(0.110));
+        // startTimeSeconds->SetAttribute("Max", DoubleValue(0.110));
+        startTimeSeconds->SetAttribute("Max", DoubleValue(0.500));
+        startTimeSeconds->SetStream(randomStream++);
     }
 
     // numSinks = ueNodes.GetN();
@@ -593,12 +623,17 @@ main(int argc, char* argv[])
                     NS_LOG_LOGIC("installing TCP DL app for UE " << u);
                     // NS_LOG_UNCOND("installing TCP DL app for UE " << u);
                     BulkSendHelper dlClient("ns3::TcpSocketFactory", InetSocketAddress(ueIpIface.GetAddress(u), dlPort));
-                    dlClient.SetAttribute("MaxBytes", UintegerValue(0));
+                    dlClient.SetAttribute("MaxBytes", UintegerValue(1000000));
                     clientApps.Add(dlClient.Install(remoteHost));
-                    // PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
-                    // serverApps.Add(dlPacketSinkHelper.Install(ue));
-                    // sinks.Add(serverApps);
-                    // lastTotalRx.push_back(0);
+
+                    Ptr<BulkSendApplication> bulkSend = clientApps.Get(0)->GetObject<BulkSendApplication>();
+                    std::cout << "UE " << u << " BulkSend app created, will start at " 
+                            << startTimeSeconds->GetValue() << "s" << std::endl;
+
+                    PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
+                    serverApps.Add(dlPacketSinkHelper.Install(ue));
+                    sinks.Add(serverApps);
+                    lastTotalRx.push_back(0);
                 }
                 else{
                     Config::SetDefault("ns3::OnOffApplication::DataRate", StringValue("15Mb/s"));
@@ -608,33 +643,29 @@ main(int argc, char* argv[])
                     dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
                     dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
 
-                    dlClient.SetAttribute("MaxBytes", UintegerValue(0));
+                    dlClient.SetAttribute("MaxBytes", UintegerValue(1000000));
                     clientApps.Add(dlClient.Install(remoteHost));
-                    // PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
-                    // serverApps.Add(dlPacketSinkHelper.Install(ue));
-                    // sinks.Add(serverApps);
-                    // lastTotalRx.push_back(0);
+                    PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
+                    serverApps.Add(dlPacketSinkHelper.Install(ue));
+                    sinks.Add(serverApps);
+                    lastTotalRx.push_back(0);
                 }
-                PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
-                serverApps.Add(dlPacketSinkHelper.Install(ue));
-                sinks.Add(serverApps);
-                lastTotalRx.push_back(0);
             }
             
             std::cout << "UE " << u << " configured with IP " 
                       << ueIpIface.GetAddress(u) << " and port " << dlPort << std::endl;
             
             // The filter for the low-latency traffic
-            Ptr<NrEpcTft> lowLatTft = Create<NrEpcTft>();
+            Ptr<NrEpcTft> tft = Create<NrEpcTft>();
             NrEpcTft::PacketFilter dlpf;
             dlpf.localPortStart = dlPort;
             dlpf.localPortEnd = dlPort;
-            dlpf.direction = NrEpcTft::DOWNLINK;
-            lowLatTft->Add(dlpf);
+            // dlpf.direction = NrEpcTft::DOWNLINK;
+            tft->Add(dlpf);
 
             // The bearer that will carry low latency traffic
             NrEpsBearer bearer(NrEpsBearer::NGBR_VIDEO_TCP_DEFAULT);
-            nrHelper->ActivateDedicatedEpsBearer(ueDevs.Get(u), bearer, lowLatTft);
+            nrHelper->ActivateDedicatedEpsBearer(ueDevs.Get(u), bearer, tft);
             // NS_LOG_UNCOND("Bearer activated for UE " << u << " with IP " << ueIpIface.GetAddress(u));
     
             Time startTime = Seconds(startTimeSeconds->GetValue());
@@ -679,8 +710,6 @@ main(int argc, char* argv[])
                 MakeBoundCallback(&ReportUeMeasurementsCallback));
 
     Simulator::Schedule (Seconds (0.4), &CalculateThroughput,100);
-
-
 
 
     std::cout << "Starting simulation..." << std::endl;
