@@ -261,8 +261,8 @@ main(int argc, char* argv[])
     {
         hBS = 30;
         hUT = 1.5;
-        scenarioEnum = BandwidthPartInfo::UMa;
-        // scenarioEnum = BandwidthPartInfo::UMa_LoS;
+        // scenarioEnum = BandwidthPartInfo::UMa;
+        scenarioEnum = BandwidthPartInfo::UMa_LoS;
     }
     else if (scenario == "UMi-StreetCanyon")
     {
@@ -328,25 +328,11 @@ main(int argc, char* argv[])
     Vector pos = gnbPositionAlloc->GetNext();
     std::cout << "gNB position from allocator: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
 
-
-
-    // Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
-    // for (uint32_t i = 0; i < nGnbSites; ++i)
-    // {
-    //     uint32_t x = i % nGnbSitesX;
-    //     uint32_t y = i / nGnbSitesX;
-    //     double posX = x * interSiteDistance;
-    //     double posY = y * interSiteDistance;
-    //     gnbPositionAlloc->Add(Vector(posX, posY, hBS));
-    //     NS_LOG_UNCOND("gNB " << i << " at position (" << posX << ", " << posY << ", " << hBS << ")");
-    // }
-
     MobilityHelper gnbMobility;
     gnbMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     gnbMobility.SetPositionAllocator(gnbPositionAlloc);
     gnbMobility.Install(gnbNodes);
     BuildingsHelper::Install(gnbNodes);
-
 
    // Configuring user Mobility
     MobilityHelper ueMobility;
@@ -430,7 +416,6 @@ main(int argc, char* argv[])
     // nrHelper->SetChannelConditionModelAttribute("LinkO2iConditionToAntennaHeight",BooleanValue(linkO2iConditionToAntennaHeight));
     // nrHelper->SetChannelConditionModelAttribute("O2iThreshold", DoubleValue(0.5));
     // nrHelper->SetChannelConditionModelAttribute("O2iLowLossThreshold",DoubleValue(0.5));
-    Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
     //nrHelper->SetBeamformingHelper(idealBeamformingHelper);
     nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
     nrHelper->SetEpcHelper(nrEpcHelper);
@@ -450,6 +435,7 @@ main(int argc, char* argv[])
                                                    numCcPerBand,
                                                    scenarioEnum);
     OperationBandInfo band = ccBwpCreator.CreateOperationBandContiguousCc(bandConf);
+
     // Initialize channel and pathloss, plus other things inside band.
     nrHelper->InitializeOperationBand(&band);
     allBwps = CcBwpCreator::GetAllBwps({band});
@@ -463,7 +449,7 @@ main(int argc, char* argv[])
     nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
     nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
     nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
-
+    Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
 
     // Configure scheduler
     // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
@@ -626,13 +612,10 @@ main(int argc, char* argv[])
                     NS_LOG_LOGIC("installing TCP DL app for UE " << u);
                     // NS_LOG_UNCOND("installing TCP DL app for UE " << u);
                     BulkSendHelper dlClient("ns3::TcpSocketFactory", InetSocketAddress(ueIpIface.GetAddress(u), dlPort));
-                    dlClient.SetAttribute("MaxBytes", UintegerValue(1000000));
+                    // dlClient.SetAttribute("MaxBytes", UintegerValue(1000000));
+                    dlClient.SetAttribute("MaxBytes", UintegerValue(0));
                     clientApps.Add(dlClient.Install(remoteHost));
-
                     Ptr<BulkSendApplication> bulkSend = clientApps.Get(0)->GetObject<BulkSendApplication>();
-                    std::cout << "UE " << u << " BulkSend app created, will start at " 
-                            << startTimeSeconds->GetValue() << "s" << std::endl;
-
                     PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
                     serverApps.Add(dlPacketSinkHelper.Install(ue));
                     sinks.Add(serverApps);
@@ -645,8 +628,7 @@ main(int argc, char* argv[])
                     OnOffHelper dlClient("ns3::TcpSocketFactory", InetSocketAddress(ueIpIface.GetAddress(u), dlPort));
                     dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
                     dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
-
-                    dlClient.SetAttribute("MaxBytes", UintegerValue(1000000));
+                    dlClient.SetAttribute("MaxBytes", UintegerValue(0));
                     clientApps.Add(dlClient.Install(remoteHost));
                     PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
                     serverApps.Add(dlPacketSinkHelper.Install(ue));
