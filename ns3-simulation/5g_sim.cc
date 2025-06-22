@@ -218,7 +218,6 @@ main(int argc, char* argv[])
         // LogComponentEnable("NrMacSchedulerUeInfo", LOG_LEVEL_INFO);
         // LogComponentEnable("NrGnbMac", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUeMac", LOG_LEVEL_INFO);
-        // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_LEVEL_INFO);
         // LogComponentEnable("TcpSocketBase", LOG_LEVEL_INFO);
 
         // Add detailed HARQ logging
@@ -229,10 +228,6 @@ main(int argc, char* argv[])
         // // Add MCS and CQI related logging
         // LogComponentEnable("NrAmc", LOG_LEVEL_ALL);
         // LogComponentEnable("NrMacSchedulerCQIManagement", LOG_LEVEL_ALL);
-        
-        // // Add RLC and PDCP logging for buffer status
-        // LogComponentEnable("NrRlcUm", LOG_LEVEL_ALL);
-        // LogComponentEnable("NrPdcp", LOG_LEVEL_ALL);
         
         // // Add channel quality logging
         // LogComponentEnable("NrSpectrumPhy", LOG_LEVEL_ALL);
@@ -249,6 +244,7 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::UdpClient::PacketSize", UintegerValue(1024));
     // Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(999999999));
     Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024));
+
     // set mobile device and base station antenna heights in meters, according to the chosen
     // scenario
     if (scenario == "RMa")
@@ -423,8 +419,7 @@ main(int argc, char* argv[])
     CcBwpCreator ccBwpCreator;
     const uint8_t numCcPerBand = 1; // have a single band, and that band is composed of a single component carrier
 
-    /* Create the configuration for the CcBwpHelper. SimpleOperationBandConf creates
-     * a single BWP per CC and a single BWP in CC.
+    /* Create the configuration for the CcBwpHelper. SimpleOperationBandConf creates a single BWP per CC and a single BWP in CC.
      *the configured spectrum is:
      * |---------------Band---------------|
      * |---------------CC-----------------|
@@ -435,7 +430,6 @@ main(int argc, char* argv[])
                                                    numCcPerBand,
                                                    scenarioEnum);
     OperationBandInfo band = ccBwpCreator.CreateOperationBandContiguousCc(bandConf);
-
     // Initialize channel and pathloss, plus other things inside band.
     nrHelper->InitializeOperationBand(&band);
     allBwps = CcBwpCreator::GetAllBwps({band});
@@ -686,6 +680,23 @@ main(int argc, char* argv[])
     Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
                    MakeCallback(&CourseChange));
 
+
+    for (const auto& bwpRef : allBwps)
+    {
+        auto* bwpPtr = bwpRef.get().get();
+        if (bwpPtr)
+        {
+            std::cout << "  Central Frequency: " << bwpPtr->m_centralFrequency << " Hz" << std::endl;
+            std::cout << "  Bandwidth: " << bwpPtr->m_channelBandwidth << " Hz" << std::endl;
+            std::cout << "  BWP Id: " << static_cast<uint32_t>(bwpPtr->m_bwpId) << std::endl;
+            std::cout << std::endl;
+        }
+        else
+        {
+            std::cout << "Null BWP pointer encountered!" << std::endl;
+        }
+    }
+
     // // UE measurements callback
     // Config::Connect("/NodeList/*/DeviceList/*/$ns3::NrUeNetDevice/ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
     //                MakeBoundCallback(&ReportUeMeasurementsCallback));
@@ -700,6 +711,10 @@ main(int argc, char* argv[])
     std::cout << "Starting simulation..." << std::endl;
     Simulator::Run();
     std::cout << "Simulation finished." << std::endl;
+
+    Ptr<NrUeNetDevice> nrUeDev = DynamicCast<NrUeNetDevice>(ueNetDev.Get(0));
+    Ptr<NrPhy> uePhy = nrUeDev->GetPhy(0);
+    std::cout << "numRbs = " << uePhy->GetRbNum() << std::endl;
 
     nrHelper = nullptr;
     Simulator::Destroy();
