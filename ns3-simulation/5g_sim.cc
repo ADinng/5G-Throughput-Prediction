@@ -17,6 +17,7 @@
 #include <ns3/nr-stats-calculator.h>
 #include <cmath>  
 #include <fstream>
+#include <map>
 #include "ns3/string.h"
 #include "ns3/callback.h"
 #include "ns3/hexagonal-grid-scenario-helper.h"
@@ -41,6 +42,7 @@ NotifyConnectionEstablishedUe (std::string context,
 }
 
 
+std::map<uint16_t, uint32_t> g_rntiToUeIndex;
 // Callback for UE connection released
 void 
 NotifyConnectionReleasedUe (std::string context, 
@@ -48,6 +50,8 @@ NotifyConnectionReleasedUe (std::string context,
                             uint16_t cellId, 
                             uint16_t rnti)
 {
+    uint32_t unIndex = imsi -1;
+    g_rntiToUeIndex[rnti] = unIndex;
     std::cout << Simulator::Now().GetSeconds() << " " << context
               << " UE IMSI " << imsi
               << ": released from CellId " << cellId
@@ -108,20 +112,23 @@ void CqiTrace(std::string context, uint16_t cellId, uint16_t rnti, double rsrp, 
 }
 
 
-// void
-// ReportUeMeasurementsCallback(std::string path, uint16_t rnti, uint16_t cellId,
-//                             double rsrp, double rsrq, bool servingCell, uint8_t componentCarrierId)
-// {
-//     if (servingCell == true)
-//         std::cout << Simulator::Now().GetSeconds() << " "
-//                   << " RNTI " << rnti
-//                   << ", CellId: " << cellId
-//                   << ", Serving Cell: " << servingCell
-//                   << ", RSRP: " << rsrp
-//                   << ", RSRQ: " << rsrq
-//                   << std::endl;
-// }
+struct UeRssiInfo {
+    double rssi_dBm = NaN;
+    double time = NaN;
+};
 
+std::map<uint32_t, UeRssiInfo> g_ueIndexToRssi;  //ueIndex ->rssi
+
+void
+UeRssiPerProcessedChunkTrace(uint32_t ueIndex, double rssidBm)
+{
+    g_ueIndexToRssi[ueIndex].rssi_dBm=rssidBm;
+    // std::cout << Simulator::Now().GetSeconds() << " "<< "UE " << ueIndex << " RSSI (dBm): " << rssidBm << std::endl;
+}
+
+
+uint32_t numRbs_global = 533;
+extern uint32_t numRbs_global;
 void
 ReportUeMeasurementsCallback(
                              std::string path,
@@ -133,14 +140,40 @@ ReportUeMeasurementsCallback(
                              uint8_t componentCarrierId)
 {
     if (servingCell == true)
-    std::cout << Simulator::Now().GetSeconds() << " "
-                << " RNTI " << rnti
-                << ", CellId: " << cellId
-                << ", Serving Cell: " << servingCell
-                << ", RSRP: " << rsrp
-                << ", RSRQ: " << rsrq
-                << std::endl;
+    {
+        uint32_t ueIndex = g_rntiToUeIndex[rnti];
+        double rssi_dBm = g_ueIndexToRssi[ueIndex].rssi_dBm;
+
+        if (!std::isnan(rssi_dBm))
+        {
+            double rsrp_mW = std::pow(10.0, rsrp / 10.0);
+            double rssi_mW = std::pow(10.0, rssi_dBm / 10.0);
+            double rsrq_linear = (numRbs_global * rsrp_mW) / rssi_mW;
+            double rsrq_dB = 10 * std::log10(rsrq_linear);
+
+            std::cout << Simulator::Now().GetSeconds() << " "
+            << " RNTI " << rnti
+            << ", CellId: " << cellId
+            << ", Serving Cell: " << servingCell
+            << ", RSRP: " << rsrp
+            << ", RSRQ: " << rsrq_dB
+            << std::endl;
+        }
+        // else
+        // {
+        //     std::cout << Simulator::Now().GetSeconds() << " "
+        //     << " RNTI " << rnti
+        //     << ", CellId: " << cellId
+        //     << ", Serving Cell: " << servingCell
+        //     << ", RSRP: " << rsrp
+        //     << ", RSRQ: " << rsrq
+        //     << std::endl;
+        // }
+
+    }
 }
+
+
 
 int
 main(int argc, char* argv[])
@@ -679,27 +712,6 @@ main(int argc, char* argv[])
     // mobility callbacks
     Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
                    MakeCallback(&CourseChange));
-
-
-    for (const auto& bwpRef : allBwps)
-    {
-        auto* bwpPtr = bwpRef.get().get();
-        if (bwpPtr)
-        {
-            std::cout << "  Central Frequency: " << bwpPtr->m_centralFrequency << " Hz" << std::endl;
-            std::cout << "  Bandwidth: " << bwpPtr->m_channelBandwidth << " Hz" << std::endl;
-            std::cout << "  BWP Id: " << static_cast<uint32_t>(bwpPtr->m_bwpId) << std::endl;
-            std::cout << std::endl;
-        }
-        else
-        {
-            std::cout << "Null BWP pointer encountered!" << std::endl;
-        }
-    }
-
-    // // UE measurements callback
-    // Config::Connect("/NodeList/*/DeviceList/*/$ns3::NrUeNetDevice/ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
-    //                MakeBoundCallback(&ReportUeMeasurementsCallback));
     
     Config::Connect("/NodeList/*/DeviceList/*/$ns3::NrNetDevice/$ns3::NrUeNetDevice/"
                 "ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
@@ -707,6 +719,15 @@ main(int argc, char* argv[])
 
     Simulator::Schedule (Seconds (0.4), &CalculateThroughput,100);
 
+    for (uint32_t i = 0; i < ueNetDev.GetN(); i++)
+    {   Ptr<NrSpectrumPhy> ueSpectrumPhy =
+            DynamicCast<NrUeNetDevice>(ueNetDev.Get(i))->GetPhy(0)->GetSpectrumPhy();
+        Ptr<NrInterference> ueInterference = ueSpectrumPhy->GetNrInterference();
+
+        ueInterference->TraceConnectWithoutContext(
+            "RssiPerProcessedChunk",
+            MakeBoundCallback(&UeRssiPerProcessedChunkTrace, i));
+    }
 
     std::cout << "Starting simulation..." << std::endl;
     Simulator::Run();
@@ -714,6 +735,7 @@ main(int argc, char* argv[])
 
     Ptr<NrUeNetDevice> nrUeDev = DynamicCast<NrUeNetDevice>(ueNetDev.Get(0));
     Ptr<NrPhy> uePhy = nrUeDev->GetPhy(0);
+    numRbs_global = uePhy->GetRbNum();
     std::cout << "numRbs = " << uePhy->GetRbNum() << std::endl;
 
     nrHelper = nullptr;
