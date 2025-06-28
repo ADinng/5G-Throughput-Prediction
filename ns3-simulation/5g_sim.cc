@@ -27,6 +27,9 @@
 using namespace ns3;
 NS_LOG_COMPONENT_DEFINE("NRSimpleScenario");
 
+
+std::map<uint16_t, uint32_t> g_rntiToUeIndex;
+
 // Callback for UE connection established
 void 
 NotifyConnectionEstablishedUe (std::string context, 
@@ -34,15 +37,18 @@ NotifyConnectionEstablishedUe (std::string context,
                                 uint16_t cellId, 
                                 uint16_t rnti)
 {
+    uint32_t ueIndex = imsi -1;
+    g_rntiToUeIndex[rnti] = ueIndex;
     std::cout << Simulator::Now().GetSeconds() << " " << context
               << " UE IMSI " << imsi
               << ": connected to CellId " << cellId
               << " with RNTI " << rnti 
               << std::endl;
+    
+    //std::cout << Simulator::Now().GetSeconds() << " "<< "UE: " << ueIndex << " imsi: " << imsi << " rnti: " << rnti <<std::endl;
+    
 }
 
-
-std::map<uint16_t, uint32_t> g_rntiToUeIndex;
 // Callback for UE connection released
 void 
 NotifyConnectionReleasedUe (std::string context, 
@@ -50,15 +56,12 @@ NotifyConnectionReleasedUe (std::string context,
                             uint16_t cellId, 
                             uint16_t rnti)
 {
-    uint32_t unIndex = imsi -1;
-    g_rntiToUeIndex[rnti] = unIndex;
     std::cout << Simulator::Now().GetSeconds() << " " << context
               << " UE IMSI " << imsi
               << ": released from CellId " << cellId
               << " with RNTI " << rnti 
               << std::endl;
 }
-
 
 void RrcStateChangeCallback(uint64_t imsi, uint16_t cellId, uint16_t rnti, NrUeRrc::State oldState, NrUeRrc::State newState)
 {
@@ -123,7 +126,7 @@ void
 UeRssiPerProcessedChunkTrace(uint32_t ueIndex, double rssidBm)
 {
     g_ueIndexToRssi[ueIndex].rssi_dBm=rssidBm;
-    // std::cout << Simulator::Now().GetSeconds() << " "<< "UE " << ueIndex << " RSSI (dBm): " << rssidBm << std::endl;
+    //std::cout << Simulator::Now().GetSeconds() << " "<< "UE " << ueIndex << " RSSI (dBm): " << rssidBm << std::endl;
 }
 
 
@@ -146,10 +149,12 @@ ReportUeMeasurementsCallback(
 
         if (!std::isnan(rssi_dBm))
         {
-            double rsrp_mW = std::pow(10.0, rsrp / 10.0);
-            double rssi_mW = std::pow(10.0, rssi_dBm / 10.0);
-            double rsrq_linear = (numRbs_global * rsrp_mW) / rssi_mW;
-            double rsrq_dB = 10 * std::log10(rsrq_linear);
+            // double rsrp_mW = std::pow(10.0, rsrp / 10.0);
+            // double rssi_mW = std::pow(10.0, rssi_dBm / 10.0);
+            // double rsrq_linear = (numRbs_global * rsrp_mW) / rssi_mW;
+            // double rsrq_dB = 10 * std::log10(rsrq_linear);
+
+            double rsrq_dB = 10 * std::log10(numRbs_global) + rsrp - rssi_dBm;
 
             std::cout << Simulator::Now().GetSeconds() << " "
             << " RNTI " << rnti
@@ -158,6 +163,8 @@ ReportUeMeasurementsCallback(
             << ", RSRP: " << rsrp
             << ", RSRQ: " << rsrq_dB
             << std::endl;
+
+            // std::cout << "RNTI: " << rnti << ", ueIndex: " << ueIndex << ", RSRP: " << rsrp << ", RSSI: " << rssi_dBm << std::endl;
         }
         // else
         // {
@@ -180,30 +187,25 @@ main(int argc, char* argv[])
 {
     uint32_t nGnbSitesX = 1;        
     uint32_t nGnbSites = 1* nGnbSitesX;
-    double interSiteDistance =  40;  
-    // double interSiteDistance =  200; 
-    // double ueDensity = 0.000004;  //20
+    double interSiteDistance =  200; 
     // double ueDensity = 0.0005;  //100-20
-    double ueDensity = 0.0001;  //100-4
-    // double ueDensity = 0.00008;  //20
-    // double ueDensity = 0.00016;  //40
-    // double ueDensity = 0.00024; //60
-    // double ueDensity = 0.00032; //80
-    // double ueDensity = 0.0004; //100
+    double ueDensity = 0.000125;  //200-20
+    // double ueDensity = 0.00025;  //200-40
+    // double ueDensity = 0.000375;  //200-60
+    // double ueDensity = 0.0005; //200-80
+    // double ueDensity = 0.000625; //200-100
 
     uint32_t numBearersPerUe = 1;  
 
     std::string scenario = "UMa"; // scenario
     double frequency = 28e9;      // central frequency
     double bandwidth = 100e6;     // bandwidth
-    //double mobility = false;      // whether to enable mobility
-    double simTime = 50;           // in second
-    //double speed = 1;             // in m/s for walking UT.
+    double simTime = 60;           // in second
     bool logging = true; // whether to enable logging from the simulation, another option is by
                          // exporting the NS_LOG environment variable
     double hBS;          // base station antenna height in meters
     double hUT;          // user antenna height in meters
-    double txPower = 46; // txPower
+    double txPower = 40; // txPower
 
     // double o2iThreshold = 0;
     // double o2iLowLossThreshold =1.0; // shows the percentage of low losses. Default value is 100% low
@@ -338,9 +340,6 @@ main(int argc, char* argv[])
     NS_LOG_UNCOND("Area size: " << ueAreaSize << " m^2");
     NS_LOG_UNCOND("Number of UEs: " << nUes << " (density=" << ueDensity << ")");
     NS_LOG_UNCOND("Number of gNBs: " << nGnbSites);
-    NS_LOG_UNCOND("UE distribution area: x[" << ueBox.xMin << "," << ueBox.xMax 
-                  << "], y[" << ueBox.yMin << "," << ueBox.yMax << "]");
-    
     NS_LOG_UNCOND("UE distribution area: x[" << ueBox.xMin << "," << ueBox.xMax 
                   << "], y[" << ueBox.yMin << "," << ueBox.yMax << "]");
 
@@ -507,7 +506,6 @@ main(int argc, char* argv[])
         nrHelper->GetGnbPhy(gnbNetDev.Get(i), 0)->SetTxPower(txPower);
     }
 
-    // When all the configuration is done, explicitly call UpdateConfig ()
     for (auto it = gnbNetDev.Begin(); it != gnbNetDev.End(); ++it)
     {
         DynamicCast<NrGnbNetDevice>(*it)->UpdateConfig();
@@ -595,10 +593,9 @@ main(int argc, char* argv[])
     }
     else
     {
-        // startTimeSeconds->SetAttribute("Min", DoubleValue(0.100));
         startTimeSeconds->SetAttribute("Min", DoubleValue(0.100));
-        // startTimeSeconds->SetAttribute("Max", DoubleValue(0.110));
         startTimeSeconds->SetAttribute("Max", DoubleValue(0.500));
+        // startTimeSeconds->SetAttribute("Max", DoubleValue(0.110));
         startTimeSeconds->SetStream(randomStream++);
     }
 
@@ -639,7 +636,6 @@ main(int argc, char* argv[])
                     NS_LOG_LOGIC("installing TCP DL app for UE " << u);
                     // NS_LOG_UNCOND("installing TCP DL app for UE " << u);
                     BulkSendHelper dlClient("ns3::TcpSocketFactory", InetSocketAddress(ueIpIface.GetAddress(u), dlPort));
-                    // dlClient.SetAttribute("MaxBytes", UintegerValue(1000000));
                     dlClient.SetAttribute("MaxBytes", UintegerValue(0));
                     clientApps.Add(dlClient.Install(remoteHost));
                     Ptr<BulkSendApplication> bulkSend = clientApps.Get(0)->GetObject<BulkSendApplication>();
@@ -653,8 +649,9 @@ main(int argc, char* argv[])
                     NS_LOG_LOGIC("installing TCP DL ON OFF app for UE " << u);
                     // NS_LOG_UNCOND("installing TCP DL ON OFF app for UE " << u);
                     OnOffHelper dlClient("ns3::TcpSocketFactory", InetSocketAddress(ueIpIface.GetAddress(u), dlPort));
-                    dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
-                    dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
+                    dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=20.0|Max=25.0]"));
+                    dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=10.0|Max=15.0]"));
+                    // dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
                     dlClient.SetAttribute("MaxBytes", UintegerValue(0));
                     clientApps.Add(dlClient.Install(remoteHost));
                     PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
@@ -717,6 +714,7 @@ main(int argc, char* argv[])
                 "ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
                 MakeBoundCallback(&ReportUeMeasurementsCallback));
 
+
     Simulator::Schedule (Seconds (0.4), &CalculateThroughput,100);
 
     for (uint32_t i = 0; i < ueNetDev.GetN(); i++)
@@ -738,7 +736,13 @@ main(int argc, char* argv[])
     numRbs_global = uePhy->GetRbNum();
     std::cout << "numRbs = " << uePhy->GetRbNum() << std::endl;
 
+    std::cout << "m_channelBandwidth = " << uePhy->GetChannelBandwidth() << std::endl;
+
+
+    std::cout << "m_subcarrierSpacing = " << uePhy->GetSubcarrierSpacing() << std::endl;
+
     nrHelper = nullptr;
     Simulator::Destroy();
+
     return 0;
 }
