@@ -21,9 +21,21 @@ parser.add_argument('--opath', '-op',
                     help="Folder where results should be saved",
                     default='/home/user1/ns3-logs/')
 
+parser.add_argument('--num_ue', '-nu',
+                    dest="num_ue",
+                    type=int,
+                    action="store",
+                    help="Number of UEs",
+                    default=20)
 
-num_ue= 20
-simTime = 59 
+parser.add_argument('--sim_time', '-st',
+                    dest="sim_time",
+                    type=int,
+                    action="store",
+                    help="Simulation time in seconds",
+                    default=59)
+# num_ue= 20
+# simTime = 59
 
 # Expt parameters
 args = parser.parse_args()
@@ -52,7 +64,8 @@ def parse_CQI(path_to_logs, out_path):
     cqi_out_l = os.path.join(out_path, "RAW/")
     os.system("mkdir -p %s"%cqi_out_l)
     # os.system("python3 UE_parsing.py -nu 60 -f %s -op %s"%(cqi_log, cqi_out_l))  #lte
-    os.system("python3 scratch/scripts/UE_parsing.py -nu %d -f %s -op %s"%(num_ue, cqi_log, cqi_out_l))     #nr 
+    os.system("python3 scratch/scripts/UE_parsing.py -nu %d -f %s -op %s"%(args.num_ue, cqi_log, cqi_out_l))     #nr 
+    # os.system("python3 scratch/scripts/UE_parsing.py -nu %d -f %s -op %s"%(num_ue, cqi_log, cqi_out_l))     #nr 
 
 def parse_RSRP_SINR(path_to_logs, out_path):
     snr_rsrp_log = os.path.join(path_to_logs, "DlRsrpSinrStats.txt")
@@ -73,10 +86,12 @@ def parse_phy(path_to_logs, out_path):
     phy_log = os.path.join(path_to_logs, "RxPacketTrace.txt") 
     phy_out_l = os.path.join(out_path, "RAW/")
     os.system("mkdir -p %s"%phy_out_l)
-    os.system("python3 scratch/scripts/phy.py -nu %d -f %s -op %s"%(num_ue, phy_log, phy_out_l))    
+    os.system("python3 scratch/scripts/phy.py -nu %d -f %s -op %s"%(args.num_ue, phy_log, phy_out_l))  
+    # os.system("python3 scratch/scripts/phy.py -nu %d -f %s -op %s"%(num_ue, phy_log, phy_out_l))   
 
 def create_competing_metrics(metric, input_path, out_path):
-    os.system("python3 scratch/scripts/network_metric.py -nu %d -ms %s -p %s -op %s"%(num_ue, metric,
+    # os.system("python3 scratch/scripts/network_metric.py -nu %d -ms %s -p %s -op %s"%(num_ue, metric,
+    os.system("python3 scratch/scripts/network_metric.py -nu %d -ms %s -p %s -op %s"%(args.num_ue, metric,
                                                                       input_path,
                                                                      out_path))
             
@@ -112,5 +127,5 @@ if __name__ == "__main__":
         
         os.system("python3 scratch/scripts/newAveraging.py -p %s/RAW/ -op %s/averaged/1s/ -il 1.0"%(args.output_path, args.output_path))
         
-        os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path,num_ue, simTime))
-        
+        os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path, args.num_ue, args.sim_time))
+        # os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path,num_ue, simTime))

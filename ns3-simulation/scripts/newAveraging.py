@@ -82,7 +82,7 @@ for dirname, dirnames, filenames in os.walk(args.dir_path):
         #numUE = int(content.group(1))%2
         if ".csv" in filename and numUE!=0:
 
-            print (filename)
+            # print (filename)
             fullname = os.path.join(dirname,filename)
             # open a csv file using pandas DataFrame
             #fullname= '/home/darijo/Documents/ATT/24.10/TimeStamped/cqi1_timestamps_nd.csv'

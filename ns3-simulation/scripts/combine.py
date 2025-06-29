@@ -76,7 +76,7 @@ def save_metric_to_file(_file_name,values):
         #print array__
         for aa in array__:
             if aa in h2:
-                print(h2)
+                # print(h2)
                 h2.remove(aa)
     #print h2
     header = ["Time"] + h2
@@ -148,6 +148,6 @@ for i in range(int(args.num_ue)):
     for dirname, dirnames, filenames in os.walk(args.dir_path):
         for filename in filenames: 
             if ue_prefix in filename:
-                print (filename)
+                # print (filename)
                 f_names.append(filename)
         combine_values(f_names,dirname,ue_prefix)
