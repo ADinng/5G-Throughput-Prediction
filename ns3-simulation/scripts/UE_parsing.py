@@ -298,7 +298,7 @@ def save_mapping():
             for cell_id, rnti_dict in _cellid_and_rnti_to_imsi.items()
         }
     }
-    with open('ue_mapping.json', 'w') as f:
+    with open('scratch/scripts/ue_mapping.json', 'w') as f:
         json.dump(mapping_data, f)
 
 
