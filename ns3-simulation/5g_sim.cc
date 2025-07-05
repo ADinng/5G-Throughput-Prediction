@@ -22,6 +22,8 @@
 #include "ns3/callback.h"
 #include "ns3/hexagonal-grid-scenario-helper.h"
 #include "ns3/realistic-beamforming-algorithm.h"
+#include <cmath>
+#include <algorithm>
 
 
 using namespace ns3;
@@ -126,7 +128,8 @@ void
 UeRssiPerProcessedChunkTrace(uint32_t ueIndex, double rssidBm)
 {
     g_ueIndexToRssi[ueIndex].rssi_dBm=rssidBm;
-    //std::cout << Simulator::Now().GetSeconds() << " "<< "UE " << ueIndex << " RSSI (dBm): " << rssidBm << std::endl;
+    // g_ueIndexToRssi[ueIndex].time = Simulator::Now().GetSeconds();
+    // std::cout << "[RSSI] Time: " << Simulator::Now().GetSeconds() << " "<< "UE " << ueIndex << " RSSI (dBm): " << rssidBm << std::endl;
 }
 
 
@@ -154,7 +157,11 @@ ReportUeMeasurementsCallback(
             // double rsrq_linear = (numRbs_global * rsrp_mW) / rssi_mW;
             // double rsrq_dB = 10 * std::log10(rsrq_linear);
 
+            // uint32_t ueIndex = g_rntiToUeIndex[rnti];
+            // double rssi_time = g_ueIndexToRssi[ueIndex].time;
+
             double rsrq_dB = 10 * std::log10(numRbs_global) + rsrp - rssi_dBm;
+
 
             std::cout << Simulator::Now().GetSeconds() << " "
             << " RNTI " << rnti
@@ -164,7 +171,8 @@ ReportUeMeasurementsCallback(
             << ", RSRQ: " << rsrq_dB
             << std::endl;
 
-            // std::cout << "RNTI: " << rnti << ", ueIndex: " << ueIndex << ", RSRP: " << rsrp << ", RSSI: " << rssi_dBm << std::endl;
+            // std::cout << "[RSRP] Time: " << Simulator::Now().GetSeconds()<< " UE: " << ueIndex << " RSRP: " << rsrp << " RSSI: " << rssi_dBm << " RSSI_time: " << rssi_time << std::endl;
+            std::cout << "RNTI: " << rnti << ", ueIndex: " << ueIndex << ", RSRP: " << rsrp << ", RSSI: " << rssi_dBm << std::endl;
         }
         // else
         // {
@@ -194,13 +202,13 @@ main(int argc, char* argv[])
     // double ueDensity = 0.000375;  //200-60
     // double ueDensity = 0.0005; //200-80
     // double ueDensity = 0.000625; //200-100
-
     uint32_t numBearersPerUe = 1;  
 
     std::string scenario = "UMa"; // scenario
     double frequency = 28e9;      // central frequency
     double bandwidth = 100e6;     // bandwidth
-    double simTime = 60;           // in second
+    double simTime = 100;           // in second
+    // double simTime = 1000;           // in second
     bool logging = true; // whether to enable logging from the simulation, another option is by
                          // exporting the NS_LOG environment variable
     double hBS;          // base station antenna height in meters
@@ -221,7 +229,7 @@ main(int argc, char* argv[])
     /// Maximum speed value of macro UE with random waypoint model [m/s].
     uint16_t outdoorUeMaxSpeed = 20.0;
     // set mobility model: steady, gauss
-    std::string mobilityType = "steady";
+    std::string mobilityType = "gauss";
 
     // SRS Periodicity (has to be at least greater than the number of UEs per gNB)
     uint16_t srsPeriodicity = 160; // 80
@@ -277,7 +285,6 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::UdpClient::Interval", TimeValue (MilliSeconds (1)));
     Config::SetDefault("ns3::UdpClient::MaxPackets", UintegerValue(100000000));
     Config::SetDefault("ns3::UdpClient::PacketSize", UintegerValue(1024));
-    // Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(999999999));
     Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024));
 
     // set mobile device and base station antenna heights in meters, according to the chosen
@@ -292,8 +299,8 @@ main(int argc, char* argv[])
     {
         hBS = 30;
         hUT = 1.5;
-        // scenarioEnum = BandwidthPartInfo::UMa;
-        scenarioEnum = BandwidthPartInfo::UMa_LoS;
+        scenarioEnum = BandwidthPartInfo::UMa;
+        // scenarioEnum = BandwidthPartInfo::UMa_LoS;
     }
     else if (scenario == "UMi-StreetCanyon")
     {
@@ -435,18 +442,23 @@ main(int argc, char* argv[])
 
     // Create NR simulation helpers
     Ptr<NrPointToPointEpcHelper> nrEpcHelper = CreateObject<NrPointToPointEpcHelper>();
-    //Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
-    Ptr<RealisticBeamformingHelper> realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
+    Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
+    // Ptr<RealisticBeamformingHelper> realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
     
+    nrHelper->SetBeamformingHelper(idealBeamformingHelper);
+    // nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
+    nrHelper->SetEpcHelper(nrEpcHelper);
+
+
     nrHelper->SetPathlossAttribute("ShadowingEnabled", BooleanValue(true));
-    nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(100)));
     // nrHelper->SetChannelConditionModelAttribute("LinkO2iConditionToAntennaHeight",BooleanValue(linkO2iConditionToAntennaHeight));
     // nrHelper->SetChannelConditionModelAttribute("O2iThreshold", DoubleValue(0.5));
     // nrHelper->SetChannelConditionModelAttribute("O2iLowLossThreshold",DoubleValue(0.5));
-    //nrHelper->SetBeamformingHelper(idealBeamformingHelper);
-    nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
-    nrHelper->SetEpcHelper(nrEpcHelper);
+    Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
+    nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(0)));
+
+
     BandwidthPartInfoPtrVector allBwps;
     CcBwpCreator ccBwpCreator;
     const uint8_t numCcPerBand = 1; // have a single band, and that band is composed of a single component carrier
@@ -466,16 +478,15 @@ main(int argc, char* argv[])
     nrHelper->InitializeOperationBand(&band);
     allBwps = CcBwpCreator::GetAllBwps({band});
 
-    // Configure ideal beamforming method
-    // idealBeamformingHelper->SetAttribute("BeamformingMethod",
-    //                                      TypeIdValue(DirectPathBeamforming::GetTypeId()));
+    //Configure ideal beamforming method
+    idealBeamformingHelper->SetAttribute("BeamformingMethod",
+                                         TypeIdValue(DirectPathBeamforming::GetTypeId()));
 
-    RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
-    realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
-    nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
-    nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
-    nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
-    Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
+    // RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
+    // realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
+    // nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
+    // nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
+    // nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
 
     // Configure scheduler
     // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
@@ -515,9 +526,6 @@ main(int argc, char* argv[])
     {
         DynamicCast<NrUeNetDevice>(*it)->UpdateConfig();
     }
-
-
-
 
     // create the internet and install the IP stack on the UEs
     // get SGW/PGW and create a single RemoteHost
@@ -580,7 +588,7 @@ main(int argc, char* argv[])
     // ApplicationContainer serverApps;
     NS_LOG_LOGIC("setting up applications");
     uint16_t dlPort = 10000;  
-    uint16_t ulPort = 20000;  
+    // uint16_t ulPort = 20000;  
 
     std::cout << "Configuring and starting applications..." << std::endl;
     Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable>();
@@ -614,7 +622,7 @@ main(int argc, char* argv[])
         for (uint32_t b = 0; b < numBearersPerUe; ++b)
         {
             ++dlPort;
-            ++ulPort;
+            // ++ulPort;
 
             ApplicationContainer clientApps;
             ApplicationContainer serverApps;
@@ -669,7 +677,7 @@ main(int argc, char* argv[])
             NrEpcTft::PacketFilter dlpf;
             dlpf.localPortStart = dlPort;
             dlpf.localPortEnd = dlPort;
-            // dlpf.direction = NrEpcTft::DOWNLINK;
+            dlpf.direction = NrEpcTft::DOWNLINK;
             tft->Add(dlpf);
 
             // The bearer that will carry low latency traffic
