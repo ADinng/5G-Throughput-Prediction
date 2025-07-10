@@ -130,6 +130,22 @@ UeRssiPerProcessedChunkTrace(uint32_t ueIndex, double rssidBm)
 }
 
 
+void RsrpTracedCallback (uint16_t rnti,
+                                           double rsrp,
+                                           uint8_t componentCarrierId){
+
+                                           
+            std::cout << Simulator::Now().GetSeconds() << " "
+            << " RNTI " << rnti
+
+            << ", RSRP: " << rsrp
+            << std::endl;
+    }
+    ;
+
+
+
+
 uint32_t numRbs_global = 533;
 extern uint32_t numRbs_global;
 void
@@ -204,8 +220,8 @@ main(int argc, char* argv[])
     double simTime = 100;           // in second
     bool logging = true; // whether to enable logging from the simulation, another option is by
                          // exporting the NS_LOG environment variable
-    double hBS;          // base station antenna height in meters
-    double hUT;          // user antenna height in meters
+    double hBS=25;          // base station antenna height in meters
+    double hUT=1.5;          // user antenna height in meters
     double txPower = 30; // txPower
 
     // Add application type flags
@@ -224,7 +240,8 @@ main(int argc, char* argv[])
     uint16_t srsPeriodicity = 160; // 80
     Config::SetDefault("ns3::NrGnbRrc::SrsPeriodicity", UintegerValue(srsPeriodicity));
 
-    enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
+    // enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
+    BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("ueDensity", "UE density in the simulation area", ueDensity);
@@ -262,45 +279,6 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::UdpClient::PacketSize", UintegerValue(1024));
     Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024));
     // Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(999999999));
-
-    // set mobile device and base station antenna heights in meters, according to the chosen
-    // scenario
-    if (scenario == "RMa")
-    {
-        hBS = 35;
-        hUT = 1.5;
-        scenarioEnum = BandwidthPartInfo::RMa;
-    }
-    else if (scenario == "UMa")
-    {
-        hBS = 25;
-        hUT = 1.5;
-        scenarioEnum = BandwidthPartInfo::UMa;
-        // scenarioEnum = BandwidthPartInfo::UMa_LoS;
-    }
-    else if (scenario == "UMi-StreetCanyon")
-    {
-        hBS = 10;
-        hUT = 1.5;
-        scenarioEnum = BandwidthPartInfo::UMi_StreetCanyon;
-    }
-    else if (scenario == "InH-OfficeMixed")
-    {
-        hBS = 3;
-        hUT = 1;
-        scenarioEnum = BandwidthPartInfo::InH_OfficeMixed;
-    }
-    else if (scenario == "InH-OfficeOpen")
-    {
-        hBS = 3;
-        hUT = 1;
-        scenarioEnum = BandwidthPartInfo::InH_OfficeOpen;
-    }
-    else
-    {
-        NS_ABORT_MSG("Scenario not supported. Choose among 'RMa', 'UMa', 'UMi-StreetCanyon', "
-                     "'InH-OfficeMixed', and 'InH-OfficeOpen'.");
-    }
 
     // calculate the coverage area
     Box ueBox;
@@ -421,10 +399,12 @@ main(int argc, char* argv[])
     // Ptr<RealisticBeamformingHelper> realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
     
+    // Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
+    // nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(0)));
     nrHelper->SetPathlossAttribute("ShadowingEnabled", BooleanValue(true));
-    // nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(100)));
     
     // nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
+    nrHelper->SetBeamformingHelper(idealBeamformingHelper);
     nrHelper->SetEpcHelper(nrEpcHelper);
 
     BandwidthPartInfoPtrVector allBwps;
@@ -449,7 +429,6 @@ main(int argc, char* argv[])
     // Configure ideal beamforming method
     idealBeamformingHelper->SetAttribute("BeamformingMethod",
                                          TypeIdValue(DirectPathBeamforming::GetTypeId()));
-    nrHelper->SetBeamformingHelper(idealBeamformingHelper);
 
 
     // RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
@@ -458,7 +437,6 @@ main(int argc, char* argv[])
     // nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
     // nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
    
-    // Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
 
     // Configure scheduler
     // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
@@ -467,6 +445,17 @@ main(int argc, char* argv[])
 
     // nrEpcHelper->SetAttribute("S1uLinkDelay", TimeValue(MilliSeconds(0)));
 
+    // Error Model: UE and GNB with same spectrum error model.
+    std::string errorModel = "ns3::NrEesmIrT2";
+    nrHelper->SetUlErrorModel(errorModel);
+    nrHelper->SetDlErrorModel(errorModel);
+
+    // Both DL and UL AMC will have the same model behind.
+    nrHelper->SetGnbDlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
+    nrHelper->SetGnbUlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
+
+
+
     // Antennas for the UEs
     nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(1));
     nrHelper->SetUeAntennaAttribute("NumColumns", UintegerValue(1));
@@ -474,10 +463,10 @@ main(int argc, char* argv[])
                                     PointerValue(CreateObject<IsotropicAntennaModel>()));
 
     // Antennas for the gNbs
-    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(1));
-    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(1));
+    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(4));
+    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(8));
     nrHelper->SetGnbAntennaAttribute("AntennaElement",
-                                     PointerValue(CreateObject<IsotropicAntennaModel>()));
+                                     PointerValue(CreateObject<ThreeGppAntennaModel>()));
 
     nrHelper->SetGnbPhyAttribute("Numerology", UintegerValue(1));
 
@@ -700,6 +689,8 @@ main(int argc, char* argv[])
     Config::Connect("/NodeList/*/DeviceList/*/$ns3::NrNetDevice/$ns3::NrUeNetDevice/"
                 "ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
                 MakeBoundCallback(&ReportUeMeasurementsCallback));
+
+
 
 
     Simulator::Schedule (Seconds (0.4), &CalculateThroughput,100);
