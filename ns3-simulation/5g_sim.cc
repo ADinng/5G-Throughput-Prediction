@@ -216,13 +216,13 @@ main(int argc, char* argv[])
 
     std::string scenario = "UMa"; // scenario
     double frequency = 3.5e9;      // central frequency
-    double bandwidth = 50e6;     // bandwidth
+    double bandwidth = 20e6;     // bandwidth
     double simTime = 100;           // in second
     bool logging = true; // whether to enable logging from the simulation, another option is by
                          // exporting the NS_LOG environment variable
     double hBS=25;          // base station antenna height in meters
     double hUT=1.5;          // user antenna height in meters
-    double txPower = 30; // txPower
+    double txPower = 40; // txPower
 
     // Add application type flags
     bool useUdp = false;  // if true, use UDP; if false, use TCP
@@ -241,7 +241,8 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::NrGnbRrc::SrsPeriodicity", UintegerValue(srsPeriodicity));
 
     // enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
-    BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
+    // BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
+    BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa_LoS;
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("ueDensity", "UE density in the simulation area", ueDensity);
@@ -267,6 +268,7 @@ main(int argc, char* argv[])
         // LogComponentEnable("NrGnbMac", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUeMac", LOG_LEVEL_INFO);
         // LogComponentEnable("TcpSocketBase", LOG_LEVEL_INFO);
+        //   LogComponentEnable("NrUeRrc", LOG_LEVEL_INFO);
     }
 
     /*
@@ -440,20 +442,29 @@ main(int argc, char* argv[])
 
     // Configure scheduler
     // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
-    nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaPF::GetTypeId());
+    // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaPF::GetTypeId());
+    // nrHelper->SetSchedulerTypeId(NrMacSchedulerOfdmaPF::GetTypeId());
     // Config::SetDefault("ns3::NrMacSchedulerTdmaPF::FairnessIndex", DoubleValue(0.2));
 
     // nrEpcHelper->SetAttribute("S1uLinkDelay", TimeValue(MilliSeconds(0)));
 
-    // Error Model: UE and GNB with same spectrum error model.
-    std::string errorModel = "ns3::NrEesmIrT2";
-    nrHelper->SetUlErrorModel(errorModel);
-    nrHelper->SetDlErrorModel(errorModel);
+    // // Error Model: UE and GNB with same spectrum error model.
+    // std::string errorModel = "ns3::NrEesmIrT2";
+    // nrHelper->SetUlErrorModel(errorModel);
+    // nrHelper->SetDlErrorModel(errorModel);
 
-    // Both DL and UL AMC will have the same model behind.
-    nrHelper->SetGnbDlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
-    nrHelper->SetGnbUlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
+    // // Both DL and UL AMC will have the same model behind.
+    // nrHelper->SetGnbDlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
+    // nrHelper->SetGnbUlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
 
+    // Noise figure for the gNB
+    nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(5));
+    // Noise figure for the UE
+    nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(7));
+
+
+    Config::SetDefault("ns3::NrGnbRrc::EpsBearerToRlcMapping",
+                       EnumValue(useUdp ? NrGnbRrc::RLC_UM_ALWAYS : NrGnbRrc::RLC_AM_ALWAYS));
 
 
     // Antennas for the UEs
@@ -468,7 +479,12 @@ main(int argc, char* argv[])
     nrHelper->SetGnbAntennaAttribute("AntennaElement",
                                      PointerValue(CreateObject<ThreeGppAntennaModel>()));
 
-    nrHelper->SetGnbPhyAttribute("Numerology", UintegerValue(1));
+    nrHelper->SetGnbAntennaAttribute("AntennaHorizontalSpacing", DoubleValue(0.5));
+    nrHelper->SetGnbAntennaAttribute("AntennaVerticalSpacing", DoubleValue(0.8));
+    nrHelper->SetGnbAntennaAttribute("DowntiltAngle", DoubleValue(3 * M_PI / 180.0));
+                           
+
+    // nrHelper->SetGnbPhyAttribute("Numerology", UintegerValue(1));
 
     NetDeviceContainer gnbNetDev = nrHelper->InstallGnbDevice(gnbNodes, allBwps);
     NetDeviceContainer ueNetDev = nrHelper->InstallUeDevice(ueNodes, allBwps);
