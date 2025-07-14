@@ -443,17 +443,6 @@ main(int argc, char* argv[])
     nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
     nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
    
-
-
-    std::string fhControlMethod = "OptimizeMcs";
-    uint32_t fhCapacity = 100000;
-    uint8_t ohDyn = 100;
-    
-    nrHelper->EnableFhControl();
-    nrHelper->SetFhControlAttribute("FhControlMethod", StringValue(fhControlMethod));
-    nrHelper->SetFhControlAttribute("FhCapacity", UintegerValue(fhCapacity));
-    nrHelper->SetFhControlAttribute("OverheadDyn", UintegerValue(ohDyn));
-
     // Configure scheduler
     nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
     // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaPF::GetTypeId());
