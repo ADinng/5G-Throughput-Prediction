@@ -205,7 +205,8 @@ main(int argc, char* argv[])
     uint32_t nGnbSitesX = 1;        
     uint32_t nGnbSites = 1* nGnbSitesX;
     double interSiteDistance =  200; 
-    // double ueDensity = 0.0005;  //100-20
+    // // double ueDensity = 0.0005;  //100-20
+    // double ueDensity = 0.00005;  //100-2
     double ueDensity = 0.000125;  //200-20
     // double ueDensity = 0.00025;  //200-40
     // double ueDensity = 0.000375;  //200-60
@@ -236,11 +237,12 @@ main(int argc, char* argv[])
     // set mobility model: steady, gauss
     std::string mobilityType = "steady";
 
+    std::string pattern = "DL|DL|DL|DL|UL|DL|DL|DL|DL|UL|"; 
+
     // // SRS Periodicity (has to be at least greater than the number of UEs per gNB)
     uint16_t srsPeriodicity = 160; // 80
     Config::SetDefault("ns3::NrGnbRrc::SrsPeriodicity", UintegerValue(srsPeriodicity));
 
-    // enum BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
     // BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
     BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa_LoS;
 
@@ -268,7 +270,9 @@ main(int argc, char* argv[])
         // LogComponentEnable("NrGnbMac", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUeMac", LOG_LEVEL_INFO);
         // LogComponentEnable("TcpSocketBase", LOG_LEVEL_INFO);
-        //   LogComponentEnable("NrUeRrc", LOG_LEVEL_INFO);
+        // LogComponentEnable("NrUeRrc", LOG_LEVEL_INFO);
+        // LogComponentEnable("NrUePhy", LOG_LEVEL_DEBUG);
+        // LogComponentEnable("NrRlcAm", LOG_LEVEL_LOGIC);
     }
 
     /*
@@ -397,16 +401,16 @@ main(int argc, char* argv[])
 
     // Create NR simulation helpers
     Ptr<NrPointToPointEpcHelper> nrEpcHelper = CreateObject<NrPointToPointEpcHelper>();
-    Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
-    // Ptr<RealisticBeamformingHelper> realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
+    // Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
+    Ptr<RealisticBeamformingHelper> realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
     
-    // Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
-    // nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(0)));
+    Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
+    nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(0)));
     nrHelper->SetPathlossAttribute("ShadowingEnabled", BooleanValue(true));
     
-    // nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
-    nrHelper->SetBeamformingHelper(idealBeamformingHelper);
+    nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
+    // nrHelper->SetBeamformingHelper(idealBeamformingHelper);
     nrHelper->SetEpcHelper(nrEpcHelper);
 
     BandwidthPartInfoPtrVector allBwps;
@@ -428,25 +432,36 @@ main(int argc, char* argv[])
     nrHelper->InitializeOperationBand(&band);
     allBwps = CcBwpCreator::GetAllBwps({band});
 
-    // Configure ideal beamforming method
-    idealBeamformingHelper->SetAttribute("BeamformingMethod",
-                                         TypeIdValue(DirectPathBeamforming::GetTypeId()));
+    // // Configure ideal beamforming method
+    // idealBeamformingHelper->SetAttribute("BeamformingMethod",
+    //                                      TypeIdValue(DirectPathBeamforming::GetTypeId()));
 
 
-    // RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
-    // realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
-    // nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
-    // nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
-    // nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
+    RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
+    realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
+    nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
+    nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
+    nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
    
 
+
+    std::string fhControlMethod = "OptimizeMcs";
+    uint32_t fhCapacity = 100000;
+    uint8_t ohDyn = 100;
+    
+    nrHelper->EnableFhControl();
+    nrHelper->SetFhControlAttribute("FhControlMethod", StringValue(fhControlMethod));
+    nrHelper->SetFhControlAttribute("FhCapacity", UintegerValue(fhCapacity));
+    nrHelper->SetFhControlAttribute("OverheadDyn", UintegerValue(ohDyn));
+
     // Configure scheduler
-    // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
+    nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
     // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaPF::GetTypeId());
     // nrHelper->SetSchedulerTypeId(NrMacSchedulerOfdmaPF::GetTypeId());
     // Config::SetDefault("ns3::NrMacSchedulerTdmaPF::FairnessIndex", DoubleValue(0.2));
 
-    // nrEpcHelper->SetAttribute("S1uLinkDelay", TimeValue(MilliSeconds(0)));
+    nrHelper->SetGnbPhyAttribute("Pattern", StringValue(pattern));
+    nrEpcHelper->SetAttribute("S1uLinkDelay", TimeValue(MilliSeconds(0)));
 
     // // Error Model: UE and GNB with same spectrum error model.
     // std::string errorModel = "ns3::NrEesmIrT2";
@@ -705,7 +720,6 @@ main(int argc, char* argv[])
     Config::Connect("/NodeList/*/DeviceList/*/$ns3::NrNetDevice/$ns3::NrUeNetDevice/"
                 "ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
                 MakeBoundCallback(&ReportUeMeasurementsCallback));
-
 
 
 
