@@ -58,7 +58,8 @@ _cellid_and_rnti_to_imsi = defaultdict(lambda : defaultdict(int))
 cell_cqi = defaultdict(lambda : defaultdict(list))
 cell_thr = defaultdict(lambda : defaultdict(list))
 cell_rsrp = defaultdict(lambda : defaultdict(list))
-cell_rsrq = defaultdict(lambda : defaultdict(list))
+# cell_rsrq = defaultdict(lambda : defaultdict(list))
+cell_rssi = defaultdict(lambda : defaultdict(list))
 
 
 # load on each cell in terms of number of users connected to it
@@ -84,10 +85,10 @@ REG_END_HAND = r'([0-9]+\.?[0-9]*)\s+/NodeList/.*eNB CellId ([0-9]+): completed 
 REG_CONN_REL = r'([0-9]+\.?[0-9]*)\s+/NodeList/.*NotifyConnectionRelease UE IMSI ([0-9]+): released from CellId ([0-9]+) with RNTI ([0-9]+)'
 
 REG_POS_UE = r'Time: ([0-9]+\.?[0-9]*) /NodeList/([0-9]+)/.*/CourseChange POS: x=(-?[0-9]+\.?[0-9]*), y=(-?[0-9]+\.?[0-9]*), z=(-?[0-9]+\.?[0-9]*)'
-# REG_RSRQ_RSRP = r'([0-9]+\.?[0-9]*) /NodeList/([0-9]+)/DeviceList/[0-9]+/LteUePhy/ReportUeMeasurements RNTI ([0-9]+), CellId: ([0-9]+), Serving Cell: [0-9]+, RSRP: (-?[0-9]+\.?[0-9]*), RSRQ: (-?[0-9]+\.?[0-9]*)' #lte
 
 # 2.6  RNTI 1, CellId: 1, Serving Cell: 1, RSRP: -144.698, RSRQ: 0
-REG_RSRQ_RSRP = r'([0-9]+\.?[0-9]*)\s+RNTI\s+([0-9]+),\s+CellId:\s+([0-9]+),\s+Serving Cell:\s+([0-9]+),\s+RSRP:\s+(-?[0-9]+\.?[0-9]*),\s+RSRQ:\s+(-?[0-9]+\.?[0-9]*)'
+# REG_RSRQ_RSRP = r'([0-9]+\.?[0-9]*)\s+RNTI\s+([0-9]+),\s+CellId:\s+([0-9]+),\s+Serving Cell:\s+([0-9]+),\s+RSRP:\s+(-?[0-9]+\.?[0-9]*),\s+RSRQ:\s+(-?[0-9]+\.?[0-9]*)'
+REG_RSRQ_RSSI = r'([0-9]+\.?[0-9]*)\s+RNTI\s+([0-9]+),\s+CellId:\s+([0-9]+),\s+Serving Cell:\s+([0-9]+),\s+RSRP:\s+(-?[0-9]+\.?[0-9]*),\s+RSSI:\s+(-?[0-9]+\.?[0-9]*)'
 REG_CELL_BUFFERS = r'([0-9]+\.?[0-9]+)\s+RNTI:\s+([0-9]+)\s+Buffer Tx Level:\s+([0-9]+)\s+Buffer TxHol Level:\s+([0-9]+)\s+Buffer Rx Level: ([0-9]+)\s+Buffer RxHol Level: ([0-9]+)\s+PDU: ([0-9]+)'  
 #s = '0.644214 /NodeList/5/DeviceList/0/LteEnbRrc/HandoverEndOk eNB CellId 6: completed handover of UE with IMSI 65 RNTI 8'
 #s= 'Time: 0.7 UE 225 Current Throughput: 2.4576e+06 bit/s'
@@ -232,8 +233,8 @@ for line in infile:
             else:
                 # print ("No association")
                 print(f"No association for UE {ue_id}")
-        elif re.search(REG_RSRQ_RSRP,line):
-            new_data = re.search(REG_RSRQ_RSRP,line)
+        elif re.search(REG_RSRQ_RSSI,line):
+            new_data = re.search(REG_RSRQ_RSSI,line)
 
             # rnti = int(new_data.group(3)) #lte
             # cell_id = int(new_data.group(4)) #lte
@@ -246,12 +247,18 @@ for line in infile:
             rsrp_temp = float(np.around(float(new_data.group(5)),decimals=2))
             cell_rsrp[cell_id][new_data.group(1)].append(rsrp_temp) 
         
-            cell_rsrq[cell_id][new_data.group(1)].append(new_data.group(6))
+            # cell_rsrq[cell_id][new_data.group(1)].append(new_data.group(6))
+            rssi_temp = float(np.around(float(new_data.group(6)),decimals=2))
+            cell_rssi[cell_id][new_data.group(1)].append(rssi_temp)
+
             ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
             #comp_ues= ';'.join(str(x) for x in _cellid_and_rnti_to_imsi[cell_id].values() if x!=ue_imsi)
-            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRQ_RSRP.csv",["Time","RSRP","RSRQ","CellID_RSRQ"],new_data.group(1),rsrp_temp,new_data.group(6),cell_id)
+            
+            # save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRQ_RSRP.csv",["Time","RSRP","RSRQ","CellID_RSRQ"],new_data.group(1),rsrp_temp,new_data.group(6),cell_id)
 
             save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRP.csv",["Time","RSRP","CellID_RSRP"],new_data.group(1),rsrp_temp,cell_id)
+
+            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSSI.csv",["Time","RSSI","CellID_RSSI"],new_data.group(1),rssi_temp,cell_id)
 
         elif re.search(REG_END_HAND,line):
             
@@ -285,6 +292,10 @@ pf_rsrp.to_csv(fullname,sep=';')
 #pf_rsrq = pd.DataFrame(cell_rsrq)
 #fullname = os.path.join(args.output_path,"CELL_RSRQ.csv")
 #pf_rsrq.to_csv(fullname,sep=';')
+
+pf_rssi = pd.DataFrame(cell_rssi)
+fullname = os.path.join(args.output_path,"CELL_RSSI.csv")
+pf_rssi.to_csv(fullname,sep=';')
 
 pf_thr = pd.DataFrame(cell_thr)
 fullname = os.path.join(args.output_path,"CELL_THR.csv")

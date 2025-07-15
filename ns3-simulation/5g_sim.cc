@@ -226,9 +226,10 @@ main(int argc, char* argv[])
     double txPower = 40; // txPower
 
     // Add application type flags
-    bool useUdp = false;  // if true, use UDP; if false, use TCP
+    bool useUdp = true;  // if true, use UDP; if false, use TCP
     bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
 
+    // bool enableMimoFeedback = true;
 
     /// Minimum speed value of macro UE with random waypoint model [m/s].
     uint16_t outdoorUeMinSpeed = 15.0;
@@ -284,6 +285,7 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::UdpClient::MaxPackets", UintegerValue(100000000));
     Config::SetDefault("ns3::UdpClient::PacketSize", UintegerValue(1024));
     Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024));
+    Config::SetDefault("ns3::NrRlcAm::MaxTxBufferSize", UintegerValue(10 * 1024));
     // Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(999999999));
 
     // calculate the coverage area
@@ -443,6 +445,18 @@ main(int argc, char* argv[])
     nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
     nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
    
+    
+    // /********************************************************************/
+    // std::string fhControlMethod = "OptimizeMcs";
+    // uint32_t fhCapacity = 2000;
+    // uint8_t ohDyn = 100;
+
+    // nrHelper->EnableFhControl();
+    // nrHelper->SetFhControlAttribute("FhControlMethod", StringValue(fhControlMethod));
+    // nrHelper->SetFhControlAttribute("FhCapacity", UintegerValue(fhCapacity));
+    // nrHelper->SetFhControlAttribute("OverheadDyn", UintegerValue(ohDyn));
+    // /********************************************************************/
+
     // Configure scheduler
     nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
     // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaPF::GetTypeId());
@@ -461,15 +475,26 @@ main(int argc, char* argv[])
     // nrHelper->SetGnbDlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
     // nrHelper->SetGnbUlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
 
-    // Noise figure for the gNB
-    nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(5));
-    // Noise figure for the UE
-    nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(7));
+    // // Noise figure for the gNB
+    // nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(5));
+    // // Noise figure for the UE
+    // nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(7));
 
 
     Config::SetDefault("ns3::NrGnbRrc::EpsBearerToRlcMapping",
                        EnumValue(useUdp ? NrGnbRrc::RLC_UM_ALWAYS : NrGnbRrc::RLC_AM_ALWAYS));
 
+    NrHelper::MimoPmiParams mimoPmiParams;
+    mimoPmiParams.pmSearchMethod = "ns3::NrPmSearchFull";
+    mimoPmiParams.fullSearchCb = "ns3::NrCbTwoPort";
+    mimoPmiParams.rankLimit = 2;
+    mimoPmiParams.subbandSize = 8;
+
+
+    // if (enableMimoFeedback)
+    // {
+    //     Config::SetDefault("ns3::NrHelper::EnableMimoFeedback", BooleanValue(true));
+    // }
 
     // Antennas for the UEs
     nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(1));
@@ -486,12 +511,30 @@ main(int argc, char* argv[])
     nrHelper->SetGnbAntennaAttribute("AntennaHorizontalSpacing", DoubleValue(0.5));
     nrHelper->SetGnbAntennaAttribute("AntennaVerticalSpacing", DoubleValue(0.8));
     nrHelper->SetGnbAntennaAttribute("DowntiltAngle", DoubleValue(3 * M_PI / 180.0));
+
+    // if (enableMimoFeedback)
+    // {
+
+    //     nrHelper->SetGnbAntennaAttribute("IsDualPolarized", BooleanValue(true));
+    //     nrHelper->SetGnbAntennaAttribute("NumHorizontalPorts", UintegerValue(1));
+    //     nrHelper->SetGnbAntennaAttribute("NumVerticalPorts", UintegerValue(1));
+    //     nrHelper->SetGnbAntennaAttribute("PolSlantAngle", DoubleValue(0 * M_PI / 180.0));
+
+    //     nrHelper->SetUeAntennaAttribute("IsDualPolarized", BooleanValue(true));
+    //     nrHelper->SetUeAntennaAttribute("NumHorizontalPorts", UintegerValue(1));
+    //     nrHelper->SetUeAntennaAttribute("NumVerticalPorts", UintegerValue(1));
+    //     nrHelper->SetUeAntennaAttribute("PolSlantAngle", DoubleValue(0 * M_PI / 180.0));
+
+    //     nrHelper->SetupMimoPmi(mimoPmiParams);
+    // }
                            
 
     // nrHelper->SetGnbPhyAttribute("Numerology", UintegerValue(1));
 
     NetDeviceContainer gnbNetDev = nrHelper->InstallGnbDevice(gnbNodes, allBwps);
     NetDeviceContainer ueNetDev = nrHelper->InstallUeDevice(ueNodes, allBwps);
+    
+    // nrHelper->ConfigureFhControl(gnbNetDev);
 
     int64_t randomStream = 1;
     randomStream += nrHelper->AssignStreams(gnbNetDev, randomStream);
@@ -617,7 +660,7 @@ main(int argc, char* argv[])
 
             if (useUdp)
             {
-                // NS_LOG_LOGIC("installing UDP DL app for UE " << u);
+                NS_LOG_LOGIC("installing UDP DL app for UE " << u);
                 UdpClientHelper dlClient(ueIpIface.GetAddress(u), dlPort);
                 clientApps.Add(dlClient.Install(remoteHost));
                 PacketSinkHelper dlPacketSinkHelper("ns3::UdpSocketFactory",
@@ -671,7 +714,7 @@ main(int argc, char* argv[])
             // The bearer that will carry low latency traffic
             NrEpsBearer bearer(NrEpsBearer::NGBR_VIDEO_TCP_DEFAULT);
             nrHelper->ActivateDedicatedEpsBearer(ueDevs.Get(u), bearer, tft);
-            // NS_LOG_UNCOND("Bearer activated for UE " << u << " with IP " << ueIpIface.GetAddress(u));
+            NS_LOG_LOGIC("Bearer activated for UE " << u << " with IP " << ueIpIface.GetAddress(u));
     
             Time startTime = Seconds(startTimeSeconds->GetValue());
             std::cout<< Simulator::Now ().GetSeconds () << " " << " UE IMSI " << u << "startTime: "<<startTime << std::endl;

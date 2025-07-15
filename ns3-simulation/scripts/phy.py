@@ -112,10 +112,12 @@ for line in infile:
 
         cell_snr[cell_id][content.group(1)].append(float(content.group(15)))
 
-        cell_cqi[cell_id][content.group(1)].append(int(content.group(16)))
+        # cell_cqi[cell_id][content.group(1)].append(int(content.group(16)))
         achievableRate = (float(content.group(11)) * 8.0) / 0.001;
         direction = content.group(2)
         if direction == "DL":
+
+            cell_cqi[cell_id][content.group(1)].append(int(content.group(16)))
 
             # mcs
             save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-MCS.csv",["Time","MCS","TBSize","RV","CellID_MCS"],str(float(content.group(1))/1000.0),content.group(12),content.group(11),content.group(14),cell_id)

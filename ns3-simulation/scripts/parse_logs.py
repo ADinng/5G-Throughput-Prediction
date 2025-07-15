@@ -107,9 +107,7 @@ if __name__ == "__main__":
         print (os.getcwd())
         print (os.path.dirname(os.path.abspath(__file__)))
         
-        # parse_mcs(args.output_path + "/logs/", args.output_path)
         parse_CQI(args.output_path + "/logs", args.output_path)
-        # parse_RSRP_SINR(args.output_path+"/logs/", args.output_path)
         parse_pdcp(args.output_path+"/logs/", args.output_path)
         parse_phy(args.output_path + "/logs", args.output_path)
         
