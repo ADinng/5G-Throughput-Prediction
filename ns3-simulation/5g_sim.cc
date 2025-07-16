@@ -202,53 +202,65 @@ ReportUeMeasurementsCallback(
 int
 main(int argc, char* argv[])
 {
-    uint32_t nGnbSitesX = 1;        
-    uint32_t nGnbSites = 1* nGnbSitesX;
-    double interSiteDistance =  200; 
-    // // double ueDensity = 0.0005;  //100-20
-    // double ueDensity = 0.00005;  //100-2
-    double ueDensity = 0.000125;  //200-20
-    // double ueDensity = 0.00025;  //200-40
-    // double ueDensity = 0.000375;  //200-60
-    // double ueDensity = 0.0005; //200-80
-    // double ueDensity = 0.000625; //200-100
+    
+    bool logging = true; 
+    double simTime = 100;    // in second
 
-    uint32_t numBearersPerUe = 1;  
-
-    std::string scenario = "UMa"; // scenario
-    double frequency = 3.5e9;      // central frequency
-    double bandwidth = 20e6;     // bandwidth
-    double simTime = 100;           // in second
-    bool logging = true; // whether to enable logging from the simulation, another option is by
-                         // exporting the NS_LOG environment variable
-    double hBS=25;          // base station antenna height in meters
-    double hUT=1.5;          // user antenna height in meters
-    double txPower = 40; // txPower
-
-    // Add application type flags
-    bool useUdp = true;  // if true, use UDP; if false, use TCP
-    bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
-
-    // bool enableMimoFeedback = true;
-
-    /// Minimum speed value of macro UE with random waypoint model [m/s].
+    uint32_t nGnb = 1;
+    double nUes = 20;
+    double ueDiscRadius = 200; //The radius of the user distribution disc (in meters); all UEs will be randomly placed within this circle centered at the base station
     uint16_t outdoorUeMinSpeed = 15.0;
-    /// Maximum speed value of macro UE with random waypoint model [m/s].
     uint16_t outdoorUeMaxSpeed = 20.0;
     // set mobility model: steady, gauss
-    std::string mobilityType = "steady";
+    std::string mobilityType = "gauss";
 
+    double frequency = 3.5e9; 
+    double bandwidth = 20e6; 
+    double txPower = 40; // txPower
+    double ueTxPower = 23;
+    bool enableHarqRetx = true; //Enable or disable HARQ retransmissions in the scheduler
+    uint16_t numerology = 0;
     std::string pattern = "DL|DL|DL|DL|UL|DL|DL|DL|DL|UL|"; 
+    bool enableTDD4_1 = false;
 
+    std::string scenario = "UMa"; // scenario
+    double hBS=25;          
+    double hUT=1.5; 
+
+    double gnbNoiseFigure = 5.0;
+    double ueNoiseFigure = 7.0;
+
+    bool useUdp = false;  // if true, use UDP; if false, use TCP
+    bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
+
+    bool enableOfdma = false;
+    std::string schedulerType = "RR";
+
+    bool isLos = true;
+    int channelConditionUpdatePeriod = 0;
+    bool enableShadowing = true;
+    bool enableFading = true;
+
+
+    // NrHelper::MimoPmiParams mimoPmiParams;
+    // mimoPmiParams.pmSearchMethod = "ns3::NrPmSearchFull";
+    // mimoPmiParams.fullSearchCb = "ns3::NrCbTwoPort";
+    // mimoPmiParams.rankLimit = 2;
+    // mimoPmiParams.subbandSize = 8;
+
+
+    uint32_t numBearersPerUe = 1; 
     // // SRS Periodicity (has to be at least greater than the number of UEs per gNB)
     uint16_t srsPeriodicity = 160; // 80
     Config::SetDefault("ns3::NrGnbRrc::SrsPeriodicity", UintegerValue(srsPeriodicity));
 
-    // BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
-    BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa_LoS;
+    // if (enableMimoFeedback)
+    // {
+    //     Config::SetDefault("ns3::NrHelper::EnableMimoFeedback", BooleanValue(true));
+    // }
 
     CommandLine cmd(__FILE__);
-    cmd.AddValue("ueDensity", "UE density in the simulation area", ueDensity);
+    cmd.AddValue("nUes", "UE numers in the simulation area", nUes);
     cmd.AddValue("simTime", "Simulation time in seconds", simTime);
     cmd.AddValue("useUdp", "Use UDP protocol if true, TCP otherwise", useUdp);
     cmd.AddValue("onOffApp", "Use OnOff application if true, Bulk otherwise", onOffApp);
@@ -261,16 +273,10 @@ main(int argc, char* argv[])
         // LogComponentEnable("ThreeGppPropagationLossModel", LOG_LEVEL_ALL);
         // LogComponentEnable ("ThreeGppChannelModel", LOG_LEVEL_ALL);
         // LogComponentEnable ("ChannelConditionModel", LOG_LEVEL_ALL);
-        // LogComponentEnable ("UdpClient", LOG_LEVEL_INFO);
-        // LogComponentEnable ("UdpServer", LOG_LEVEL_INFO);
         // LogComponentEnable ("NrRlcUm", LOG_LEVEL_LOGIC);
-        // LogComponentEnable ("NrPdcp", LOG_LEVEL_INFO);
-        // LogComponentEnable("PacketSink", LOG_LEVEL_ALL);
         // LogComponentEnable("OnOffApplication", LOG_LEVEL_INFO);
         // LogComponentEnable("NrMacSchedulerTdmaPF", LOG_LEVEL_INFO);
-        // LogComponentEnable("NrGnbMac", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUeMac", LOG_LEVEL_INFO);
-        // LogComponentEnable("TcpSocketBase", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUeRrc", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUePhy", LOG_LEVEL_DEBUG);
         // LogComponentEnable("NrRlcAm", LOG_LEVEL_LOGIC);
@@ -284,43 +290,32 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::UdpClient::Interval", TimeValue (MilliSeconds (1)));
     Config::SetDefault("ns3::UdpClient::MaxPackets", UintegerValue(100000000));
     Config::SetDefault("ns3::UdpClient::PacketSize", UintegerValue(1024));
-    Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024));
-    Config::SetDefault("ns3::NrRlcAm::MaxTxBufferSize", UintegerValue(10 * 1024));
-    // Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(999999999));
+    Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024)); // default:999999999
+    Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
+    Config::SetDefault("ns3::NrGnbRrc::EpsBearerToRlcMapping",
+                       EnumValue(useUdp ? NrGnbRrc::RLC_UM_ALWAYS : NrGnbRrc::RLC_AM_ALWAYS));
 
-    // calculate the coverage area
-    Box ueBox;
-    if (nGnbSites > 0)
-    {
-        uint32_t nGnbSitesY = ceil((double)nGnbSites / nGnbSitesX);
-        
-        double coverageRadius = interSiteDistance / 2;  
-        ueBox = Box(-coverageRadius,
-                   (nGnbSitesX * interSiteDistance) + coverageRadius,
-                   -coverageRadius,
-                   (nGnbSitesY * interSiteDistance) + coverageRadius,
-                   hUT,
-                   hUT);
-    }
 
+    Box ueBox(-ueDiscRadius, ueDiscRadius, -ueDiscRadius, ueDiscRadius, hUT, hUT);
     double ueAreaSize = (ueBox.xMax - ueBox.xMin) * (ueBox.yMax - ueBox.yMin);
-    uint32_t nUes = round(ueAreaSize * ueDensity);
+    double discArea = M_PI * ueDiscRadius * ueDiscRadius;
 
-    NS_LOG_UNCOND("Area size: " << ueAreaSize << " m^2");
-    NS_LOG_UNCOND("Number of UEs: " << nUes << " (density=" << ueDensity << ")");
-    NS_LOG_UNCOND("Number of gNBs: " << nGnbSites);
-    NS_LOG_UNCOND("UE distribution area: x[" << ueBox.xMin << "," << ueBox.xMax 
-                  << "], y[" << ueBox.yMin << "," << ueBox.yMax << "]");
+    NS_LOG_UNCOND("Box area (square): " << ueAreaSize << " m^2");
+    NS_LOG_UNCOND("Disc area (circle): " << discArea << " m^2");
+    NS_LOG_UNCOND("Number of UEs: " << nUes << "");
+    NS_LOG_UNCOND("Box distribution area: x[" << ueBox.xMin << "," << ueBox.xMax 
+                << "], y[" << ueBox.yMin << "," << ueBox.yMax << "]");
+    NS_LOG_UNCOND("Disc distribution area: center(0,0), radius=" << ueDiscRadius);
 
     // create base stations and mobile terminals
     NodeContainer gnbNodes;
     NodeContainer ueNodes;
-    gnbNodes.Create(nGnbSites);
+    gnbNodes.Create(nGnb);
     ueNodes.Create(nUes);
 
     //position the base stations
     Ptr<ListPositionAllocator> gnbPositionAlloc = CreateObject<ListPositionAllocator>();
-    gnbPositionAlloc->Add(Vector((ueBox.xMin+ueBox.xMax)/2, (ueBox.yMin+ueBox.yMax)/2, hBS));
+    gnbPositionAlloc->Add(Vector(0, 0, hBS));
     Vector pos = gnbPositionAlloc->GetNext();
     std::cout << "gNB position from allocator: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
 
@@ -328,19 +323,31 @@ main(int argc, char* argv[])
     gnbMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     gnbMobility.SetPositionAllocator(gnbPositionAlloc);
     gnbMobility.Install(gnbNodes);
-    BuildingsHelper::Install(gnbNodes);
+    // BuildingsHelper::Install(gnbNodes);
 
    // Configuring user Mobility
     MobilityHelper ueMobility;
+
+    Ptr<RandomDiscPositionAllocator> ueDiscPositionAlloc =
+        CreateObject<RandomDiscPositionAllocator>();
+    ueDiscPositionAlloc->SetX(0.0);
+    ueDiscPositionAlloc->SetY(0.0);
+    ueDiscPositionAlloc->SetZ(hUT);
+    Ptr<UniformRandomVariable> randomDiscPos = CreateObject<UniformRandomVariable>();
+    randomDiscPos->SetAttribute("Min", DoubleValue(0));
+    randomDiscPos->SetAttribute("Max", DoubleValue(ueDiscRadius));
+    ueDiscPositionAlloc->SetRho(randomDiscPos);
+    ueMobility.SetPositionAllocator(ueDiscPositionAlloc);
+
     if (outdoorUeMaxSpeed > 0.0)
     {
         if (mobilityType == "steady")
         {
             ueMobility.SetMobilityModel("ns3::SteadyStateRandomWaypointMobilityModel");
-            Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MinX", DoubleValue(ueBox.xMin));
-            Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MinY", DoubleValue(ueBox.yMin));
-            Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MaxX", DoubleValue(ueBox.xMax));
-            Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MaxY", DoubleValue(ueBox.yMax));
+            Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MinX", DoubleValue(-ueDiscRadius));
+            Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MinY", DoubleValue(-ueDiscRadius));
+            Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MaxX", DoubleValue(ueDiscRadius));
+            Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MaxY", DoubleValue(ueDiscRadius));
             Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::Z", DoubleValue(hUT));
             Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MaxSpeed", DoubleValue(outdoorUeMaxSpeed));
             Config::SetDefault("ns3::SteadyStateRandomWaypointMobilityModel::MinSpeed", DoubleValue(outdoorUeMaxSpeed));
@@ -362,13 +369,16 @@ main(int argc, char* argv[])
                               StringValue("ns3::NormalRandomVariable[Mean=0.0|Variance=0.2|Bound=0.4]"));
         }
         
-        Ptr<RandomBoxPositionAllocator> uePositionAlloc = CreateObject<RandomBoxPositionAllocator>();
-        ueMobility.SetPositionAllocator(uePositionAlloc);
-        ueMobility.Install(ueNodes);
+        // Ptr<RandomBoxPositionAllocator> uePositionAlloc = CreateObject<RandomBoxPositionAllocator>();
+        // ueMobility.SetPositionAllocator(uePositionAlloc);
+        // ueMobility.Install(ueNodes);
         
+        for (uint32_t i = 0; i < ueNodes.GetN(); i++)
+        {
+            ueMobility.Install(ueNodes.Get(i));
+        }
         // forcing initialization so we don't have to wait for Nodes to
-        // start before positions are assigned (which is needed to
-        // output node positions to file and to make AttachToClosestEnb work)
+        // start before positions are assigned 
         for (auto it = ueNodes.Begin(); it != ueNodes.End(); ++it)
         {
             (*it)->Initialize();
@@ -398,53 +408,26 @@ main(int argc, char* argv[])
         ueMobility.SetPositionAllocator(uePositionAlloc);
         ueMobility.Install(ueNodes);
     }
+    // BuildingsHelper::Install(ueNodes);
 
-    BuildingsHelper::Install(ueNodes);
-
-    // Create NR simulation helpers
-    Ptr<NrPointToPointEpcHelper> nrEpcHelper = CreateObject<NrPointToPointEpcHelper>();
-    // Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
-    Ptr<RealisticBeamformingHelper> realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
+    // setup the nr simulation
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
-    
-    Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
-    nrHelper->SetChannelConditionModelAttribute("UpdatePeriod", TimeValue(MilliSeconds(0)));
-    nrHelper->SetPathlossAttribute("ShadowingEnabled", BooleanValue(true));
-    
-    nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
-    // nrHelper->SetBeamformingHelper(idealBeamformingHelper);
+    Ptr<NrPointToPointEpcHelper> nrEpcHelper = CreateObject<NrPointToPointEpcHelper>();
     nrHelper->SetEpcHelper(nrEpcHelper);
 
-    BandwidthPartInfoPtrVector allBwps;
-    CcBwpCreator ccBwpCreator;
-    const uint8_t numCcPerBand = 1; // have a single band, and that band is composed of a single component carrier
-
-    /* Create the configuration for the CcBwpHelper. SimpleOperationBandConf creates a single BWP per CC and a single BWP in CC.
-     *the configured spectrum is:
-     * |---------------Band---------------|
-     * |---------------CC-----------------|
-     * |---------------BWP----------------|
-     */
-    CcBwpCreator::SimpleOperationBandConf bandConf(frequency,
-                                                   bandwidth,
-                                                   numCcPerBand,
-                                                   scenarioEnum);
-    OperationBandInfo band = ccBwpCreator.CreateOperationBandContiguousCc(bandConf);
-    // Initialize channel and pathloss, plus other things inside band.
-    nrHelper->InitializeOperationBand(&band);
-    allBwps = CcBwpCreator::GetAllBwps({band});
-
-    // // Configure ideal beamforming method
-    // idealBeamformingHelper->SetAttribute("BeamformingMethod",
-    //                                      TypeIdValue(DirectPathBeamforming::GetTypeId()));
-
-
-    RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
-    realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
-    nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
-    nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
-    nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
-   
+    // Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
+    Ptr<RealisticBeamformingHelper> realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
+    
+    BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
+    if (scenario == "UMa")
+    {
+        scenarioEnum = isLos == 1 ? BandwidthPartInfo::UMa_LoS : BandwidthPartInfo::UMa;
+    }
+    nrHelper->SetPathlossAttribute("ShadowingEnabled", BooleanValue(enableShadowing));
+    if (!isLos)
+    {
+        nrHelper->SetChannelConditionModelAttribute("UpdatePeriod",TimeValue(MilliSeconds(channelConditionUpdatePeriod)));
+    }
     
     // /********************************************************************/
     // std::string fhControlMethod = "OptimizeMcs";
@@ -458,13 +441,17 @@ main(int argc, char* argv[])
     // /********************************************************************/
 
     // Configure scheduler
-    nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaRR::GetTypeId());
-    // nrHelper->SetSchedulerTypeId(NrMacSchedulerTdmaPF::GetTypeId());
-    // nrHelper->SetSchedulerTypeId(NrMacSchedulerOfdmaPF::GetTypeId());
-    // Config::SetDefault("ns3::NrMacSchedulerTdmaPF::FairnessIndex", DoubleValue(0.2));
+    std::stringstream scheduler;
+    std::string subType;
+    subType = !enableOfdma ? "Tdma" : "Ofdma";
+    scheduler << "ns3::NrMacScheduler" << subType << schedulerType;
+    std::cout << "Scheduler: " << scheduler.str() << std::endl;
+    nrHelper->SetSchedulerTypeId(TypeId::LookupByName(scheduler.str()));
 
-    nrHelper->SetGnbPhyAttribute("Pattern", StringValue(pattern));
-    nrEpcHelper->SetAttribute("S1uLinkDelay", TimeValue(MilliSeconds(0)));
+    if (enableTDD4_1)
+    {
+        nrHelper->SetGnbPhyAttribute("Pattern", StringValue(pattern));
+    }
 
     // // Error Model: UE and GNB with same spectrum error model.
     // std::string errorModel = "ns3::NrEesmIrT2";
@@ -475,26 +462,53 @@ main(int argc, char* argv[])
     // nrHelper->SetGnbDlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
     // nrHelper->SetGnbUlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
 
-    // // Noise figure for the gNB
-    // nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(5));
-    // // Noise figure for the UE
-    // nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(7));
+
+    nrHelper->SetSchedulerAttribute("EnableHarqReTx", BooleanValue(enableHarqRetx));
+    nrHelper->SetGnbPhyAttribute("Numerology", UintegerValue(numerology));
+    nrHelper->SetGnbPhyAttribute("TxPower", DoubleValue(txPower));
+    nrHelper->SetUePhyAttribute("TxPower", DoubleValue(ueTxPower));
+
+    // Noise figure for the gNB
+    nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(gnbNoiseFigure));
+    // Noise figure for the UE
+    nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(ueNoiseFigure));
 
 
-    Config::SetDefault("ns3::NrGnbRrc::EpsBearerToRlcMapping",
-                       EnumValue(useUdp ? NrGnbRrc::RLC_UM_ALWAYS : NrGnbRrc::RLC_AM_ALWAYS));
 
-    NrHelper::MimoPmiParams mimoPmiParams;
-    mimoPmiParams.pmSearchMethod = "ns3::NrPmSearchFull";
-    mimoPmiParams.fullSearchCb = "ns3::NrCbTwoPort";
-    mimoPmiParams.rankLimit = 2;
-    mimoPmiParams.subbandSize = 8;
+    auto bandMask = NrHelper::INIT_PROPAGATION | NrHelper::INIT_CHANNEL;
+    if (enableFading)
+    {
+        bandMask |= NrHelper::INIT_FADING;
+    }
+
+    BandwidthPartInfoPtrVector allBwps;
+    CcBwpCreator ccBwpCreator;
+    const uint8_t numCcPerBand = 1; // have a single band, and that band is composed of a single component carrier
+
+    CcBwpCreator::SimpleOperationBandConf bandConf(frequency,bandwidth,numCcPerBand,scenarioEnum);
+    OperationBandInfo band = ccBwpCreator.CreateOperationBandContiguousCc(bandConf);
+    // Initialize channel and pathloss, plus other things inside band.
+    nrHelper->InitializeOperationBand(&band,bandMask);
+    allBwps = CcBwpCreator::GetAllBwps({band});
 
 
-    // if (enableMimoFeedback)
-    // {
-    //     Config::SetDefault("ns3::NrHelper::EnableMimoFeedback", BooleanValue(true));
-    // }
+    // // Configure ideal beamforming method
+    // idealBeamformingHelper->SetAttribute("BeamformingMethod",
+    //                                      TypeIdValue(DirectPathBeamforming::GetTypeId()));
+
+
+    RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
+    realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
+    nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
+    nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
+    nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
+   
+
+    nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
+    // nrHelper->SetBeamformingHelper(idealBeamformingHelper);
+
+
+    nrEpcHelper->SetAttribute("S1uLinkDelay", TimeValue(MilliSeconds(0)));
 
     // Antennas for the UEs
     nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(1));
@@ -527,9 +541,10 @@ main(int argc, char* argv[])
 
     //     nrHelper->SetupMimoPmi(mimoPmiParams);
     // }
-                           
 
-    // nrHelper->SetGnbPhyAttribute("Numerology", UintegerValue(1));
+    // Initialize nrHelper
+    nrHelper->Initialize();
+
 
     NetDeviceContainer gnbNetDev = nrHelper->InstallGnbDevice(gnbNodes, allBwps);
     NetDeviceContainer ueNetDev = nrHelper->InstallUeDevice(ueNodes, allBwps);
@@ -540,10 +555,10 @@ main(int argc, char* argv[])
     randomStream += nrHelper->AssignStreams(gnbNetDev, randomStream);
     randomStream += nrHelper->AssignStreams(ueNetDev, randomStream);
 
-    for (uint32_t i = 0; i < gnbNodes.GetN(); ++i)
-    {
-        nrHelper->GetGnbPhy(gnbNetDev.Get(i), 0)->SetTxPower(txPower);
-    }
+    // for (uint32_t i = 0; i < gnbNodes.GetN(); ++i)
+    // {
+    //     nrHelper->GetGnbPhy(gnbNetDev.Get(i), 0)->SetTxPower(txPower);
+    // }
 
     for (auto it = gnbNetDev.Begin(); it != gnbNetDev.End(); ++it)
     {
@@ -562,8 +577,6 @@ main(int argc, char* argv[])
     // get SGW/PGW and create a single RemoteHost
     Ipv4Address remoteHostAddr;
     NodeContainer ues;
-    Ipv4StaticRoutingHelper ipv4RoutingHelper;
-    Ipv4InterfaceContainer ueIpIface;
     Ptr<Node> remoteHost;
     NetDeviceContainer ueDevs;
 
@@ -585,33 +598,26 @@ main(int argc, char* argv[])
     Ipv4AddressHelper ipv4h;
     ipv4h.SetBase("1.0.0.0", "255.0.0.0");
     Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign(internetDevices);
-    // Ipv4StaticRoutingHelper ipv4RoutingHelper;
     // in this container, interface 0 is the pgw, 1 is the remoteHost
     remoteHostAddr = internetIpIfaces.GetAddress(1);
 
-
+    Ipv4StaticRoutingHelper ipv4RoutingHelper;
     Ptr<Ipv4StaticRouting> remoteHostStaticRouting =
         ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
     remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
     ues.Add(ueNodes);
     ueDevs.Add(ueNetDev);
-
-    // internet.Install(ueNodes);
     internet.Install(ues);
 
-    // Ipv4InterfaceContainer ueIpIface;
-    // ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueNetDev));
+    Ipv4InterfaceContainer ueIpIface;
     ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
 
     std::cout << "Attaching UEs to gNBs..." << std::endl;
-    // nrHelper->AttachToClosestGnb(ueNetDev, gnbNetDev);
-
     for (uint32_t i=0; i < ueDevs.GetN(); i++)
     {
         nrHelper->AttachToGnb(ueDevs.Get(i),gnbNetDev.Get(0));
     }
     std::cout << "UEs attached successfully" << std::endl;
-
 
 
     // assign IP address to UEs, and install UDP downlink applications
@@ -634,16 +640,12 @@ main(int argc, char* argv[])
     {
         startTimeSeconds->SetAttribute("Min", DoubleValue(0.100));
         startTimeSeconds->SetAttribute("Max", DoubleValue(0.500));
-        // startTimeSeconds->SetAttribute("Max", DoubleValue(0.110));
         startTimeSeconds->SetStream(randomStream++);
     }
 
-    // numSinks = ueNodes.GetN();
     numSinks = ues.GetN();
-    // for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     for (uint32_t u = 0; u < ues.GetN(); ++u)
     {
-        // Ptr<Node> ueNode = ueNodes.Get(u);
         Ptr<Node> ue = ues.Get(u);
         // Set the default gateway for the UE
         Ptr<Ipv4StaticRouting> ueStaticRouting =
@@ -775,10 +777,7 @@ main(int argc, char* argv[])
     Ptr<NrPhy> uePhy = nrUeDev->GetPhy(0);
     numRbs_global = uePhy->GetRbNum();
     std::cout << "numRbs = " << uePhy->GetRbNum() << std::endl;
-
     std::cout << "m_channelBandwidth = " << uePhy->GetChannelBandwidth() << std::endl;
-
-
     std::cout << "m_subcarrierSpacing = " << uePhy->GetSubcarrierSpacing() << std::endl;
 
     nrHelper = nullptr;
