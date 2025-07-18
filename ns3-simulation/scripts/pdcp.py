@@ -21,10 +21,11 @@ import csv
 
 REG_PDCP = r'([0-9]+\.?[0-9]*)\s+([0-9]+\.?[0-9]*)\s+([0-9]+)\s+([0-9]+)\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+)\s+[0-9]+\s+([0-9]+)\s+([0-9]+\.?[0-9]+)'
 
+# lte- DLPdcpstats.txt
 #% start	end	CellId	IMSI	RNTI	LCID	nTxPDUs	TxBytes	nRxPDUs	RxBytes	delay	stdDev	min	max	PduSize	stdDev	min	max
 #   0.25	0.5	1	1	7	4	95	100130	21	22134	0.0650943	0.0212789	0.011999	0.094999	1054	0	1054	1054	
 
-# Nr
+# Nr - NrDlPdcpStatsE2E.txt
 # % start(s)	end(s)	CellId	IMSI	RNTI	LCID	nTxPDUs	TxBytes	nRxPDUs	RxBytes	delay(s)	stdDev(s)	min(s)	max(s)	PduSize	stdDev	min	max
 # 0	0.25	1	1	1	4	5	290	4	232	0.030685	0.048135	0.00284576	0.102774	58	0	58	58	
 
@@ -76,6 +77,7 @@ def save_metric_to_file(_path,_file_name,header,*values):
 
 print (args.output_path)
 #infile = open("/home/darijo/workspace/ns-allinone-3.25/ns-3.25/DlPdcpStats.txt")
+
 infile = open(args._file_trace)
 for line in infile:
     #print line

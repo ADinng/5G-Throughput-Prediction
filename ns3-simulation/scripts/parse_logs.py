@@ -125,5 +125,8 @@ if __name__ == "__main__":
         
         os.system("python3 scratch/scripts/newAveraging.py -p %s/RAW/ -op %s/averaged/1s/ -il 1.0"%(args.output_path, args.output_path))
         
-        os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path, args.num_ue, args.sim_time))
-        # os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path,num_ue, simTime))
+        # os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_MCS,MCS"%(args.output_path, args.output_path, args.num_ue, args.sim_time))
+
+        os.system("python3 scratch/scripts/combine.py -p %s/averaged/1s/ -op %s/combine/1s/ -il 1.0 -nu %d -td %d -di Ach.Rate,CellID_PDCP,CellID_THR,CellID_BLER,CellID_SINR,CellID_RSRP,CellID_RSSI,CellID_MCS,MCS"%(args.output_path, args.output_path, args.num_ue, args.sim_time))
+
+        os.system("python3 scratch/scripts/position_plot.py -p %s/Positions/ -op %s/Trajectory/" % (args.output_path, args.output_path))
