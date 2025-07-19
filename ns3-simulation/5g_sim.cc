@@ -215,13 +215,16 @@ main(int argc, char* argv[])
     std::string mobilityType = "gauss";
 
     double frequency = 3.5e9; 
-    double bandwidth = 20e6; 
+    double bandwidth = 50e6; 
     double txPower = 40; // txPower
     double ueTxPower = 23;
     bool enableHarqRetx = true; //Enable or disable HARQ retransmissions in the scheduler
     uint16_t numerology = 0;
     std::string pattern = "DL|DL|DL|DL|UL|DL|DL|DL|DL|UL|"; 
-    bool enableTDD4_1 = false;
+    bool enableTDD4_1 = true;
+
+    bool enableErrormodel = false;
+
 
     std::string scenario = "UMa"; // scenario
     double hBS=25;          
@@ -241,12 +244,24 @@ main(int argc, char* argv[])
     bool enableShadowing = true;
     bool enableFading = true;
 
+    bool enableMimoFeedback = false;
+    uint32_t ueNumRows = 1;
+    uint32_t ueNumColumns = 1;
+    bool ueIsoAntennaModel = true;
 
-    // NrHelper::MimoPmiParams mimoPmiParams;
-    // mimoPmiParams.pmSearchMethod = "ns3::NrPmSearchFull";
-    // mimoPmiParams.fullSearchCb = "ns3::NrCbTwoPort";
-    // mimoPmiParams.rankLimit = 2;
-    // mimoPmiParams.subbandSize = 8;
+    uint32_t gnbNumRows = 4;
+    uint32_t gnbNumColumns = 8;
+    bool gNbIsoAntennaModel = true;
+    double gnbHSpacing = 0.5;
+    double gnbVSpacing = 0.8;
+
+    double downtiltAngle = 3.0;
+
+    NrHelper::MimoPmiParams mimoPmiParams;
+    mimoPmiParams.pmSearchMethod = "ns3::NrPmSearchFull";
+    mimoPmiParams.fullSearchCb = "ns3::NrCbTwoPort";
+    mimoPmiParams.rankLimit = 2;
+    mimoPmiParams.subbandSize = 8;
 
 
     uint32_t numBearersPerUe = 1; 
@@ -254,10 +269,10 @@ main(int argc, char* argv[])
     uint16_t srsPeriodicity = 160; // 80
     Config::SetDefault("ns3::NrGnbRrc::SrsPeriodicity", UintegerValue(srsPeriodicity));
 
-    // if (enableMimoFeedback)
-    // {
-    //     Config::SetDefault("ns3::NrHelper::EnableMimoFeedback", BooleanValue(true));
-    // }
+    if (enableMimoFeedback)
+    {
+        Config::SetDefault("ns3::NrHelper::EnableMimoFeedback", BooleanValue(true));
+    }
 
     CommandLine cmd(__FILE__);
     cmd.AddValue("nUes", "UE numers in the simulation area", nUes);
@@ -291,9 +306,15 @@ main(int argc, char* argv[])
     Config::SetDefault("ns3::UdpClient::MaxPackets", UintegerValue(100000000));
     Config::SetDefault("ns3::UdpClient::PacketSize", UintegerValue(1024));
     Config::SetDefault("ns3::NrRlcUm::MaxTxBufferSize", UintegerValue(10 * 1024)); // default:999999999
+    Config::SetDefault("ns3::NrRlcAm::MaxTxBufferSize", UintegerValue(10 * 1024)); // 100KB
     Config::SetDefault("ns3::ThreeGppChannelModel::UpdatePeriod", TimeValue(MilliSeconds(0)));
-    Config::SetDefault("ns3::NrGnbRrc::EpsBearerToRlcMapping",
-                       EnumValue(useUdp ? NrGnbRrc::RLC_UM_ALWAYS : NrGnbRrc::RLC_AM_ALWAYS));
+    // Config::SetDefault("ns3::NrGnbRrc::EpsBearerToRlcMapping",
+    //                    EnumValue(useUdp ? NrGnbRrc::RLC_UM_ALWAYS : NrGnbRrc::RLC_AM_ALWAYS));
+
+
+    // Config::SetDefault("ns3::NrRlcUm::EnablePdcpDiscarding", BooleanValue(true));
+    // Config::SetDefault("ns3::NrRlcUm::DiscardTimerMs", UintegerValue(0));
+    // Config::SetDefault("ns3::NrRlcUm::ReorderingTimer", TimeValue(MilliSeconds(20)));
 
 
     Box ueBox(-ueDiscRadius, ueDiscRadius, -ueDiscRadius, ueDiscRadius, hUT, hUT);
@@ -453,14 +474,16 @@ main(int argc, char* argv[])
         nrHelper->SetGnbPhyAttribute("Pattern", StringValue(pattern));
     }
 
-    // // Error Model: UE and GNB with same spectrum error model.
-    // std::string errorModel = "ns3::NrEesmIrT2";
-    // nrHelper->SetUlErrorModel(errorModel);
-    // nrHelper->SetDlErrorModel(errorModel);
+    if (enableErrormodel){
+        // Error Model: UE and GNB with same spectrum error model.
+        std::string errorModel = "ns3::NrEesmIrT2";
+        nrHelper->SetUlErrorModel(errorModel);
+        nrHelper->SetDlErrorModel(errorModel);
 
-    // // Both DL and UL AMC will have the same model behind.
-    // nrHelper->SetGnbDlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
-    // nrHelper->SetGnbUlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
+        // Both DL and UL AMC will have the same model behind.
+        nrHelper->SetGnbDlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
+        nrHelper->SetGnbUlAmcAttribute("AmcModel", EnumValue(NrAmc::ErrorModel));
+    }
 
 
     nrHelper->SetSchedulerAttribute("EnableHarqReTx", BooleanValue(enableHarqRetx));
@@ -511,36 +534,62 @@ main(int argc, char* argv[])
     nrEpcHelper->SetAttribute("S1uLinkDelay", TimeValue(MilliSeconds(0)));
 
     // Antennas for the UEs
-    nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(1));
-    nrHelper->SetUeAntennaAttribute("NumColumns", UintegerValue(1));
-    nrHelper->SetUeAntennaAttribute("AntennaElement",
-                                    PointerValue(CreateObject<IsotropicAntennaModel>()));
+    nrHelper->SetUeAntennaAttribute("NumRows", UintegerValue(ueNumRows));
+    nrHelper->SetUeAntennaAttribute("NumColumns", UintegerValue(ueNumColumns));
+    if (ueIsoAntennaModel)
+    {
+        nrHelper->SetUeAntennaAttribute("AntennaElement",
+                                        PointerValue(CreateObject<IsotropicAntennaModel>()));
+    }
+    else
+    {
+        nrHelper->SetUeAntennaAttribute("AntennaElement",
+                                        PointerValue(CreateObject<ThreeGppAntennaModel>()));
+    }
+
 
     // Antennas for the gNbs
-    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(4));
-    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(8));
+    nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(gnbNumRows));
+    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(gnbNumColumns));
     nrHelper->SetGnbAntennaAttribute("AntennaElement",
                                      PointerValue(CreateObject<ThreeGppAntennaModel>()));
+    
+    if (gNbIsoAntennaModel)
+    {
+        nrHelper->SetGnbAntennaAttribute("AntennaElement",
+                                         PointerValue(CreateObject<IsotropicAntennaModel>()));
+    }
+    else
+    {
+        nrHelper->SetGnbAntennaAttribute("AntennaElement",
+                                         PointerValue(CreateObject<ThreeGppAntennaModel>()));
+    }
 
-    nrHelper->SetGnbAntennaAttribute("AntennaHorizontalSpacing", DoubleValue(0.5));
-    nrHelper->SetGnbAntennaAttribute("AntennaVerticalSpacing", DoubleValue(0.8));
-    nrHelper->SetGnbAntennaAttribute("DowntiltAngle", DoubleValue(3 * M_PI / 180.0));
 
-    // if (enableMimoFeedback)
-    // {
+    nrHelper->SetGnbAntennaAttribute("AntennaHorizontalSpacing", DoubleValue(gnbHSpacing));
+    nrHelper->SetGnbAntennaAttribute("AntennaVerticalSpacing", DoubleValue(gnbVSpacing));
+    nrHelper->SetGnbAntennaAttribute("DowntiltAngle", DoubleValue(downtiltAngle * M_PI / 180.0));
 
-    //     nrHelper->SetGnbAntennaAttribute("IsDualPolarized", BooleanValue(true));
-    //     nrHelper->SetGnbAntennaAttribute("NumHorizontalPorts", UintegerValue(1));
-    //     nrHelper->SetGnbAntennaAttribute("NumVerticalPorts", UintegerValue(1));
-    //     nrHelper->SetGnbAntennaAttribute("PolSlantAngle", DoubleValue(0 * M_PI / 180.0));
+    if (enableMimoFeedback)
+    {
 
-    //     nrHelper->SetUeAntennaAttribute("IsDualPolarized", BooleanValue(true));
-    //     nrHelper->SetUeAntennaAttribute("NumHorizontalPorts", UintegerValue(1));
-    //     nrHelper->SetUeAntennaAttribute("NumVerticalPorts", UintegerValue(1));
-    //     nrHelper->SetUeAntennaAttribute("PolSlantAngle", DoubleValue(0 * M_PI / 180.0));
+        nrHelper->SetGnbAntennaAttribute("IsDualPolarized", BooleanValue(false));
+        nrHelper->SetGnbAntennaAttribute("NumHorizontalPorts", UintegerValue(1));
+        nrHelper->SetGnbAntennaAttribute("NumVerticalPorts", UintegerValue(1));
+        nrHelper->SetGnbAntennaAttribute("PolSlantAngle", DoubleValue(0 * M_PI / 180.0));
 
-    //     nrHelper->SetupMimoPmi(mimoPmiParams);
-    // }
+        nrHelper->SetUeAntennaAttribute("IsDualPolarized", BooleanValue(false));
+        nrHelper->SetUeAntennaAttribute("NumHorizontalPorts", UintegerValue(1));
+        nrHelper->SetUeAntennaAttribute("NumVerticalPorts", UintegerValue(1));
+        nrHelper->SetUeAntennaAttribute("PolSlantAngle", DoubleValue(0 * M_PI / 180.0));
+
+        nrHelper->SetupMimoPmi(mimoPmiParams);
+    }
+
+        // gNb routing between Bearer and bandwidh part
+    nrHelper->SetGnbBwpManagerAlgorithmAttribute("NGBR_VIDEO_TCP_DEFAULT",UintegerValue(0));
+    // Ue routing between Bearer and bandwidth part
+    nrHelper->SetUeBwpManagerAlgorithmAttribute("NGBR_VIDEO_TCP_DEFAULT", UintegerValue(0));
 
     // Initialize nrHelper
     nrHelper->Initialize();
@@ -555,10 +604,6 @@ main(int argc, char* argv[])
     randomStream += nrHelper->AssignStreams(gnbNetDev, randomStream);
     randomStream += nrHelper->AssignStreams(ueNetDev, randomStream);
 
-    // for (uint32_t i = 0; i < gnbNodes.GetN(); ++i)
-    // {
-    //     nrHelper->GetGnbPhy(gnbNetDev.Get(i), 0)->SetTxPower(txPower);
-    // }
 
     for (auto it = gnbNetDev.Begin(); it != gnbNetDev.End(); ++it)
     {
@@ -575,15 +620,15 @@ main(int argc, char* argv[])
 
     // create the internet and install the IP stack on the UEs
     // get SGW/PGW and create a single RemoteHost
-    Ipv4Address remoteHostAddr;
-    NodeContainer ues;
-    Ptr<Node> remoteHost;
-    NetDeviceContainer ueDevs;
+    // Ipv4Address remoteHostAddr;
+    // NodeContainer ues;
+    // NetDeviceContainer ueDevs;
 
     NS_LOG_LOGIC("setting up internet and remote host");
+    Ptr<Node> pgw = nrEpcHelper->GetPgwNode();
     NodeContainer remoteHostContainer;
     remoteHostContainer.Create(1);
-    remoteHost = remoteHostContainer.Get(0);
+    Ptr<Node> remoteHost= remoteHostContainer.Get(0);
     InternetStackHelper internet;
     internet.Install(remoteHostContainer);
 
@@ -592,30 +637,30 @@ main(int argc, char* argv[])
     p2ph.SetDeviceAttribute("DataRate", DataRateValue(DataRate("100Gb/s")));
     p2ph.SetDeviceAttribute("Mtu", UintegerValue(2500));
     p2ph.SetChannelAttribute("Delay", TimeValue(Seconds(0.010)));
-    Ptr<Node> pgw = nrEpcHelper->GetPgwNode();
     NetDeviceContainer internetDevices = p2ph.Install(pgw, remoteHost);
 
     Ipv4AddressHelper ipv4h;
     ipv4h.SetBase("1.0.0.0", "255.0.0.0");
     Ipv4InterfaceContainer internetIpIfaces = ipv4h.Assign(internetDevices);
     // in this container, interface 0 is the pgw, 1 is the remoteHost
-    remoteHostAddr = internetIpIfaces.GetAddress(1);
+    // remoteHostAddr = internetIpIfaces.GetAddress(1);
 
     Ipv4StaticRoutingHelper ipv4RoutingHelper;
     Ptr<Ipv4StaticRouting> remoteHostStaticRouting =
         ipv4RoutingHelper.GetStaticRouting(remoteHost->GetObject<Ipv4>());
     remoteHostStaticRouting->AddNetworkRouteTo(Ipv4Address("7.0.0.0"), Ipv4Mask("255.0.0.0"), 1);
-    ues.Add(ueNodes);
-    ueDevs.Add(ueNetDev);
-    internet.Install(ues);
+    // ues.Add(ueNodes);
+    // ueDevs.Add(ueNetDev);
+    // internet.Install(ues);
+    internet.Install(ueNodes);
 
     Ipv4InterfaceContainer ueIpIface;
-    ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueDevs));
+    ueIpIface = nrEpcHelper->AssignUeIpv4Address(NetDeviceContainer(ueNetDev)); //ueDevs
 
     std::cout << "Attaching UEs to gNBs..." << std::endl;
-    for (uint32_t i=0; i < ueDevs.GetN(); i++)
+    for (uint32_t i=0; i < ueNetDev.GetN(); i++)
     {
-        nrHelper->AttachToGnb(ueDevs.Get(i),gnbNetDev.Get(0));
+        nrHelper->AttachToGnb(ueNetDev.Get(i),gnbNetDev.Get(0));
     }
     std::cout << "UEs attached successfully" << std::endl;
 
@@ -643,10 +688,10 @@ main(int argc, char* argv[])
         startTimeSeconds->SetStream(randomStream++);
     }
 
-    numSinks = ues.GetN();
-    for (uint32_t u = 0; u < ues.GetN(); ++u)
+    numSinks = ueNodes.GetN();
+    for (uint32_t u = 0; u < ueNodes.GetN(); ++u)
     {
-        Ptr<Node> ue = ues.Get(u);
+        Ptr<Node> ue = ueNodes.Get(u);
         // Set the default gateway for the UE
         Ptr<Ipv4StaticRouting> ueStaticRouting =
             ipv4RoutingHelper.GetStaticRouting(ue->GetObject<Ipv4>());
@@ -715,7 +760,7 @@ main(int argc, char* argv[])
 
             // The bearer that will carry low latency traffic
             NrEpsBearer bearer(NrEpsBearer::NGBR_VIDEO_TCP_DEFAULT);
-            nrHelper->ActivateDedicatedEpsBearer(ueDevs.Get(u), bearer, tft);
+            nrHelper->ActivateDedicatedEpsBearer(ueNetDev.Get(u), bearer, tft);
             NS_LOG_LOGIC("Bearer activated for UE " << u << " with IP " << ueIpIface.GetAddress(u));
     
             Time startTime = Seconds(startTimeSeconds->GetValue());
@@ -738,7 +783,6 @@ main(int argc, char* argv[])
     // Config::Connect("/NodeList/*/DeviceList/*/ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
     //                 MakeCallback(&CqiTrace)
     // );
-
 
     // Register callback for UE RRC connection established event
     Config::Connect("/NodeList/*/DeviceList/*/NrUeRrc/ConnectionEstablished",
@@ -779,6 +823,8 @@ main(int argc, char* argv[])
     std::cout << "numRbs = " << uePhy->GetRbNum() << std::endl;
     std::cout << "m_channelBandwidth = " << uePhy->GetChannelBandwidth() << std::endl;
     std::cout << "m_subcarrierSpacing = " << uePhy->GetSubcarrierSpacing() << std::endl;
+
+
 
     nrHelper = nullptr;
     Simulator::Destroy();
