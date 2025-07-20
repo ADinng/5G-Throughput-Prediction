@@ -1,5 +1,20 @@
 # Development Log (dev_log.md)
 
+## 2025-06-10
+**[ns3-simulation/scripts/phy.py]**
+- Developed a new script for parsing UE PHY layer performance metrics from 5G NR RxPacketTrace.txt, including SINR, CQI, MCS, and TBLER extraction and CSV export.
+
+**[ns3-simulation/scripts/UE_parsing.py]**
+- Modified the script to adapt all 4G-related logic and regular expressions to support 5G NR trace formats and metrics.
+- Added extraction of RSRP (Reference Signal Received Power) from 5G NR traces.
+
+## 2025-06-09
+**[ns3-simulation/scripts/mcs2.py]**
+- Modified and adapted the script to support 5G NR trace formats for MCS parsing.
+
+**[ns3-simulation/scripts/pdcp.py]**
+- Modified and adapted the script to support 5G NR trace formats for PDCP throughput and delay parsing.
+
 ## 2025-06-07
 **[ns3-simulation/5g_sim.cc]**
 - Added TCP On-Off application module support:
