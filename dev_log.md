@@ -1,5 +1,25 @@
 # Development Log (dev_log.md)
 
+## 2025-06-07
+- Added TCP On-Off application module support:
+  - Implemented logic to configure and install TCP On-Off applications for UEs when onOffApp is set to true.
+  - Set OnTime and OffTime attributes for On-Off traffic patterns.
+  - Ensured correct integration with PacketSink and bearer activation for TCP On-Off flows.
+  - Added dedicated EPS bearer activation for TCP On-Off flows using NrEpcTft and NrEpsBearer to support low-latency traffic.
+
+## 2025-06-06
+- Added support for TCP application type in the simulation:
+  - Implemented logic to configure and install TCP BulkSend and PacketSink applications for UEs.
+  - Added conditional checks to select between TCP and other application types.
+  - Set MaxBytes attribute for BulkSendHelper to 0 (unlimited transfer).
+
+## 2025-06-05
+- Added new callback registrations and corresponding functions:
+  - Registered callbacks for UE RRC connection establishment and release events.
+  - Registered mobility callback to track UE position changes.
+  - Registered callback for UE measurement reporting (e.g., RSRP, RSRQ, etc.).
+  - Implemented the corresponding handler functions for these events.
+
 ## 2025-06-03
 - Changed scenario configuration:
   - Switched from UMa_LoS to UMa.
