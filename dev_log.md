@@ -1,5 +1,95 @@
 # Development Log (dev_log.md)
 
+## 2025-07-05
+**[ns3-simulation/5g_sim.cc]**
+- Updated antenna and beamforming configuration:
+  - Set both UE and gNB antenna numbers to 1x1.
+  - Switched to IsotropicAntennaModel for both UE and gNB.
+  - Used IdealBeamformingHelper for beamforming configuration.
+
+## 2025-07-01
+**[model_training/colaborative_users.py]**
+- Data generation/experiment:
+  - Generated collaborative user data for 20 UEs over a 60-second simulation (ue20_60s).
+
+## 2025-06-30
+**[model_training/colaborative_users.py]**
+- Code review/analysis:
+  - Reviewed and analyzed the code logic for collaborative user statistics and feature extraction.
+
+## 2025-06-29
+**[ns3-simulation/5g_sim.cc]**
+- Simulation/Experiment:
+  - Ran 5g_sim.cc to generate simulation data for 20, 40, 60, 80, and 100 users, each over a 100-second duration.
+  - Collected output data for subsequent analysis.
+
+## 2025-06-28
+**[ns3-simulation/5g_sim.cc]**
+- Modified OnTime and OffTime duration ranges for the On-Off application:
+  - Adjusted the minimum and maximum values for OnTime and OffTime attributes.
+- Updated the start time range for TCP applications:
+  - Changed the Min and Max values for the TCP application start time.
+
+## 2025-06-25
+**[ns3-simulation/5g_sim.cc]**
+- Analysis/Observation:
+  - Noted that the On-Off application mode produces data with long silence periods in the simulation output.
+
+## 2025-06-24
+**[ns3-simulation/5g_sim.cc]**
+- Calculated RSRQ using numRbs, RSSI, and RSRP values:
+  - Utilized g_ueIndexToRssi (std::map<uint32_t, UeRssiInfo>) to store and retrieve per-UE RSSI.
+  - Performed RSRQ computation in the ReportUeMeasurementsCallback function based on the collected metrics.
+
+## 2025-06-23
+**[ns3-simulation/5g_sim.cc]**
+- Added RSSI tracing and logging:
+  - Implemented the UeRssiPerProcessedChunkTrace callback to capture and store per-UE RSSI values during simulation.
+  - Connected the callback to the RssiPerProcessedChunk trace source for each UE.
+
+## 2025-06-22
+**[ns3-simulation/5g_sim.cc]**
+- Added code to retrieve numRbs, channel bandwidth, and subcarrier spacing from the UE PHY:
+  - Output these values for later use in RSRQ calculation and analysis.
+
+## 2025-06-21
+**[ns3-simulation/5g_sim.cc]**
+- Continued analysis of the zero throughput issue under the On-Off application mode.
+- Changed the MaxBytes attribute for dlClient to 0 to allow unlimited data transfer.
+
+## 2025-06-20
+**[ns3-simulation/5g_sim.cc]**
+- Continued analysis of the zero throughput issue under the On-Off application mode.
+- Modified channel settings to investigate and address the throughput problem.
+
+## 2025-06-19
+**[ns3-simulation/5g_sim.cc]**
+- Analysis:
+  - Investigated the issue of zero throughput observed under the On-Off application mode.
+  - No code changes made; focused on data and simulation output analysis.
+
+## 2025-06-13
+**[ns3-simulation/5g_sim.cc]**
+- Changed UE attachment logic:
+  - Replaced AttachToClosestGnb with AttachToGnb to explicitly attach each UE to a specified gNB.
+
+## 2025-06-12
+**[ns3-simulation/scripts/network_metric.py]**
+- Continued development and adaptation of the script for 5G NR:
+  - Improved metric extraction and summarization logic to better handle 5G NR trace formats and data structures.
+
+**[ns3-simulation/5g_sim.cc]**
+- Added code to print RSRP and RSRQ values.
+- Observed that RSRQ is always zero in the simulation output.
+- Investigated contrib/nr/model/nr-ue-phy.cc and found that RSRQ is currently hardcoded to zero.
+
+## 2025-06-11
+**[ns3-simulation/scripts/network_metric.py]**
+- Developed a new script for processing and summarizing network performance metrics for 5G NR:
+  - Extracts and aggregates specified metrics (e.g., CQI) from per-UE trace files.
+  - Computes cell-level statistics by aligning and averaging metrics across users in the same cell.
+  - Outputs summarized results to CSV files for further analysis.
+
 ## 2025-06-10
 **[ns3-simulation/scripts/phy.py]**
 - Developed a new script for parsing UE PHY layer performance metrics from 5G NR RxPacketTrace.txt, including SINR, CQI, MCS, and TBLER extraction and CSV export.
