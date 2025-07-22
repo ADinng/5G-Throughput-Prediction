@@ -130,22 +130,6 @@ UeRssiPerProcessedChunkTrace(uint32_t ueIndex, double rssidBm)
 }
 
 
-void RsrpTracedCallback (uint16_t rnti,
-                                           double rsrp,
-                                           uint8_t componentCarrierId){
-
-                                           
-            std::cout << Simulator::Now().GetSeconds() << " "
-            << " RNTI " << rnti
-
-            << ", RSRP: " << rsrp
-            << std::endl;
-    }
-    ;
-
-
-
-
 uint32_t numRbs_global = 533;
 extern uint32_t numRbs_global;
 void
@@ -216,7 +200,7 @@ main(int argc, char* argv[])
 
     double frequency = 3.5e9; 
     double bandwidth = 50e6; 
-    double txPower = 40; // txPower
+    double txPower = 30; // txPower
     double ueTxPower = 23;
     bool enableHarqRetx = true; //Enable or disable HARQ retransmissions in the scheduler
     uint16_t numerology = 0;
@@ -230,11 +214,16 @@ main(int argc, char* argv[])
     double hBS=25;          
     double hUT=1.5; 
 
-    double gnbNoiseFigure = 5.0;
-    double ueNoiseFigure = 7.0;
+    bool enableNoiseFigure = true;
+    double gnbNoiseFigure = 7.0;
+    double ueNoiseFigure = 10.0;
+
+    bool useFixedMcs = false;
 
     bool useUdp = false;  // if true, use UDP; if false, use TCP
     bool onOffApp = true; // if true, use On-Off application; if false, use BulkSend
+
+    bool idealBeamform = true;
 
     bool enableOfdma = false;
     std::string schedulerType = "RR";
@@ -249,12 +238,13 @@ main(int argc, char* argv[])
     uint32_t ueNumColumns = 1;
     bool ueIsoAntennaModel = true;
 
-    uint32_t gnbNumRows = 4;
-    uint32_t gnbNumColumns = 8;
+    uint32_t gnbNumRows = 1;
+    uint32_t gnbNumColumns = 2;
     bool gNbIsoAntennaModel = true;
+
+    bool enableGnbAntennaArrayConfig = true;
     double gnbHSpacing = 0.5;
     double gnbVSpacing = 0.8;
-
     double downtiltAngle = 3.0;
 
     NrHelper::MimoPmiParams mimoPmiParams;
@@ -344,7 +334,7 @@ main(int argc, char* argv[])
     gnbMobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     gnbMobility.SetPositionAllocator(gnbPositionAlloc);
     gnbMobility.Install(gnbNodes);
-    // BuildingsHelper::Install(gnbNodes);
+    BuildingsHelper::Install(gnbNodes);
 
    // Configuring user Mobility
     MobilityHelper ueMobility;
@@ -429,15 +419,23 @@ main(int argc, char* argv[])
         ueMobility.SetPositionAllocator(uePositionAlloc);
         ueMobility.Install(ueNodes);
     }
-    // BuildingsHelper::Install(ueNodes);
+    BuildingsHelper::Install(ueNodes);
 
     // setup the nr simulation
     Ptr<NrHelper> nrHelper = CreateObject<NrHelper>();
     Ptr<NrPointToPointEpcHelper> nrEpcHelper = CreateObject<NrPointToPointEpcHelper>();
     nrHelper->SetEpcHelper(nrEpcHelper);
 
-    // Ptr<IdealBeamformingHelper> idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
-    Ptr<RealisticBeamformingHelper> realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
+    Ptr<IdealBeamformingHelper> idealBeamformingHelper;
+    Ptr<RealisticBeamformingHelper> realisticBeamformingHelper;
+
+    if (idealBeamform)
+    {
+        idealBeamformingHelper = CreateObject<IdealBeamformingHelper>();
+    }else
+    {
+        realisticBeamformingHelper = CreateObject<RealisticBeamformingHelper>();
+    }
     
     BandwidthPartInfo::Scenario scenarioEnum = BandwidthPartInfo::UMa;
     if (scenario == "UMa")
@@ -491,12 +489,15 @@ main(int argc, char* argv[])
     nrHelper->SetGnbPhyAttribute("TxPower", DoubleValue(txPower));
     nrHelper->SetUePhyAttribute("TxPower", DoubleValue(ueTxPower));
 
-    // Noise figure for the gNB
-    nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(gnbNoiseFigure));
-    // Noise figure for the UE
-    nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(ueNoiseFigure));
+    nrHelper->SetSchedulerAttribute("FixedMcsDl", BooleanValue(useFixedMcs));
+    nrHelper->SetSchedulerAttribute("FixedMcsUl", BooleanValue(useFixedMcs));
 
-
+    if (enableNoiseFigure){
+        // Noise figure for the gNB
+        nrHelper->SetGnbPhyAttribute("NoiseFigure", DoubleValue(gnbNoiseFigure));
+        // Noise figure for the UE
+        nrHelper->SetUePhyAttribute("NoiseFigure", DoubleValue(ueNoiseFigure));
+    }
 
     auto bandMask = NrHelper::INIT_PROPAGATION | NrHelper::INIT_CHANNEL;
     if (enableFading)
@@ -515,21 +516,28 @@ main(int argc, char* argv[])
     allBwps = CcBwpCreator::GetAllBwps({band});
 
 
-    // // Configure ideal beamforming method
-    // idealBeamformingHelper->SetAttribute("BeamformingMethod",
-    //                                      TypeIdValue(DirectPathBeamforming::GetTypeId()));
+    if (idealBeamform) 
+    {
+        // Configure ideal beamforming method
+        idealBeamformingHelper->SetAttribute("BeamformingMethod",
+                                            TypeIdValue(DirectPathBeamforming::GetTypeId()));
+    }else
+    {
+        RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
+        realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
+        nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
+        nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
+        nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
+    }
 
-
-    RealisticBfManager::TriggerEvent realTriggerEvent{RealisticBfManager::SRS_COUNT};
-    realisticBeamformingHelper->SetBeamformingMethod(RealisticBeamformingAlgorithm::GetTypeId());
-    nrHelper->SetGnbBeamManagerTypeId(RealisticBfManager::GetTypeId());
-    nrHelper->SetGnbBeamManagerAttribute("TriggerEvent", EnumValue(realTriggerEvent));
-    nrHelper->SetGnbBeamManagerAttribute("UpdateDelay", TimeValue(MicroSeconds(0)));
    
-
-    nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
-    // nrHelper->SetBeamformingHelper(idealBeamformingHelper);
-
+   if (idealBeamform)
+   {
+        nrHelper->SetBeamformingHelper(idealBeamformingHelper);
+   }else
+   {
+        nrHelper->SetBeamformingHelper(realisticBeamformingHelper);
+   }
 
     nrEpcHelper->SetAttribute("S1uLinkDelay", TimeValue(MilliSeconds(0)));
 
@@ -550,10 +558,7 @@ main(int argc, char* argv[])
 
     // Antennas for the gNbs
     nrHelper->SetGnbAntennaAttribute("NumRows", UintegerValue(gnbNumRows));
-    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(gnbNumColumns));
-    nrHelper->SetGnbAntennaAttribute("AntennaElement",
-                                     PointerValue(CreateObject<ThreeGppAntennaModel>()));
-    
+    nrHelper->SetGnbAntennaAttribute("NumColumns", UintegerValue(gnbNumColumns));    
     if (gNbIsoAntennaModel)
     {
         nrHelper->SetGnbAntennaAttribute("AntennaElement",
@@ -565,10 +570,13 @@ main(int argc, char* argv[])
                                          PointerValue(CreateObject<ThreeGppAntennaModel>()));
     }
 
+    if (enableGnbAntennaArrayConfig)
+    {
+        nrHelper->SetGnbAntennaAttribute("AntennaHorizontalSpacing", DoubleValue(gnbHSpacing));
+        nrHelper->SetGnbAntennaAttribute("AntennaVerticalSpacing", DoubleValue(gnbVSpacing));
+        nrHelper->SetGnbAntennaAttribute("DowntiltAngle", DoubleValue(downtiltAngle * M_PI / 180.0));
+    }
 
-    nrHelper->SetGnbAntennaAttribute("AntennaHorizontalSpacing", DoubleValue(gnbHSpacing));
-    nrHelper->SetGnbAntennaAttribute("AntennaVerticalSpacing", DoubleValue(gnbVSpacing));
-    nrHelper->SetGnbAntennaAttribute("DowntiltAngle", DoubleValue(downtiltAngle * M_PI / 180.0));
 
     if (enableMimoFeedback)
     {

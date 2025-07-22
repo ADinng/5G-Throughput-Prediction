@@ -9,16 +9,15 @@ import csv
 import json
 
 
-'''Script for parsing UE performance metrics (RB utilisation)
+'''
+Script for parsing UE performance metrics (PHY layer)[RxPacketTrace.txt]
 
-    Created by Darijo Raca, MISL, Computer Science, UCC, 13.10.2016.
-    Updated by Xingmei Ding, Computer Science, UCC, 09.06.2025.
+    Created by Xingmei Ding, Computer Science, UCC, 09.06.2025.
 
     Tasks:
         - extract each metric to its own file and per user
         - group all metrics per user and align with timeline
         - export results to csv
-        -
 '''
 
 # nr- RxPacketTrace.txt
