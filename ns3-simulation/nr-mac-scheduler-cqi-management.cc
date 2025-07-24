@@ -10,6 +10,7 @@
 #include "nr-mac-scheduler-cqi-management.h"
 
 #include "nr-amc.h"
+#include <fstream>
 
 #include <ns3/log.h>
 #include <ns3/nr-spectrum-value-helper.h>
@@ -140,6 +141,12 @@ NrMacSchedulerCQIManagement::DlWBCQIReported(const DlCqiInfo& info,
 {
     NS_LOG_FUNCTION(this);
 
+    // std::cout << "Time: " << Simulator::Now().GetSeconds()
+    //           << " RNTI: " << ueInfo->m_rnti
+    //           << " Reported CQI: " << static_cast<uint32_t>(info.m_wbCqi)
+    //           << std::endl;
+
+
     ueInfo->m_dlCqi.m_cqiType = NrMacSchedulerUeInfo::CqiInfo::WB;
     ueInfo->m_dlCqi.m_wbCqi = info.m_wbCqi;
     ueInfo->m_dlCqi.m_timer = expirationTime;
@@ -167,6 +174,26 @@ NrMacSchedulerCQIManagement::DlWBCQIReported(const DlCqiInfo& info,
                 << " MCS = " << static_cast<uint32_t>(ueInfo->m_dlMcs)
                 << " Achievable Rate = " << achievableRate << " bps");
 
+    
+    std::ofstream cqilogFile("NrDlCqiStats.txt", std::ios::app);  
+    cqilogFile << "Time: " << Simulator::Now().GetSeconds()
+            << " RNTI = " << ueInfo->m_rnti
+            << " CellID = " << GetCellId()
+            << " achievableRate = " << achievableRate
+            << " wideband CQI " << static_cast<uint32_t>(ueInfo->m_dlCqi.m_wbCqi)
+            << " reported"
+            << std::endl;
+
+    cqilogFile.close();
+
+
+    // std::cout << "Time: " << Simulator::Now().GetSeconds()
+    //       << " RNTI = " << ueInfo->m_rnti
+    //       << " CellID = " << GetCellId()
+    //       << " achievableRate = " << achievableRate
+    //       << " wideband CQI " << static_cast<uint32_t>(ueInfo->m_dlCqi.m_wbCqi)
+    //       << " reported"
+    //       << std::endl;
 
     if (info.m_optPrecMat)
     {
