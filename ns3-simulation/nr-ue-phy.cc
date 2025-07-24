@@ -1217,6 +1217,10 @@ NrUePhy::GeneratePeriodicCqiReport()
         {
             if (m_cachedCtrlSinr)
             {
+                double avgSinr = ComputeAvgSinr(*m_cachedCtrlSinr);
+                // double avgSinrDb = 10 * std::log10(avgSinr);
+                m_dlDataSinrTrace(GetCellId(), m_rnti, avgSinr, GetBwpId());
+
                 Ptr<NrDlCqiMessage> msg = CreateDlCqiFeedbackMessage(*m_cachedCtrlSinr);
                 if (msg)
                 {
@@ -1248,6 +1252,13 @@ NrUePhy::GenerateDlCqiReport(const SpectrumValue& sinr)
     if (m_ulConfigured && (m_rnti > 0))
     {
         m_dlDataSinrTrace(GetCellId(), m_rnti, ComputeAvgSinr(sinr), GetBwpId());
+
+        if (!m_cachedCtrlSinr)
+        {
+            m_cachedCtrlSinr = Create<SpectrumValue>(sinr.GetSpectrumModel());
+        }
+        *m_cachedCtrlSinr = sinr;
+
 
         if (Simulator::Now() > m_wbCqiLast)
         {
@@ -1525,27 +1536,25 @@ NrUePhy::ReportDlCtrlSinr(const SpectrumValue& sinr)
 
     NS_ASSERT(rbUsed);
     m_dlCtrlSinrTrace(GetCellId(), m_rnti, sinrSum / rbUsed, GetBwpId());
-
     // std::cout << Simulator::Now().GetSeconds() << " "
     // << " RNTI " << m_rnti
     // << ", SINR: " << sinrSum / rbUsed
     // << std::endl;
 
-
-    if (rbUsed > 0)
-    {
-        if (!m_cachedCtrlSinr)
-        {
-            m_cachedCtrlSinr = Create<SpectrumValue>(sinr.GetSpectrumModel());
-        }
-        *m_cachedCtrlSinr = sinr;
-        // std::cout << Simulator::Now().GetSeconds() << " "
-        // << " RNTI " << m_rnti
-        // << ", CachedCtrlSinr: " << *m_cachedCtrlSinr
-        // << ", SINR: " << sinrSum / rbUsed
-        // << std::endl;
-        NS_LOG_DEBUG("Cached SINR updated at time " << Simulator::Now().GetMilliSeconds() << " ms");
-    }
+    // if (rbUsed > 0)
+    // {
+    //     if (!m_cachedCtrlSinr)
+    //     {
+    //         m_cachedCtrlSinr = Create<SpectrumValue>(sinr.GetSpectrumModel());
+    //     }
+    //     *m_cachedCtrlSinr = sinr;
+    //     // std::cout << Simulator::Now().GetSeconds() << " "
+    //     // << " RNTI " << m_rnti
+    //     // << ", CachedCtrlSinr: " << *m_cachedCtrlSinr
+    //     // << ", SINR: " << sinrSum / rbUsed
+    //     // << std::endl;
+    //     NS_LOG_DEBUG("Cached SINR updated at time " << Simulator::Now().GetMilliSeconds() << " ms");
+    // }
 }
 
 uint8_t

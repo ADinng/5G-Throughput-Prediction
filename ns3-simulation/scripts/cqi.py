@@ -5,12 +5,13 @@ import subprocess
 from collections import defaultdict
 from argparse import ArgumentParser
 import csv
+import pandas as pd
+import json
 
 
 '''Script for parsing UE performance metrics (RB utilisation)
 
-    Created by Darijo Raca, MISL, Computer Science, UCC, 13.10.2016.
-    Updated by Xingmei Ding, Computer Science, UCC, 09.06.2025.
+    Updated by Xingmei Ding, Computer Science, UCC, 23.07.2025.
 
     Tasks:
         - extract each metric to its own file and per user
@@ -18,30 +19,31 @@ import csv
         - export results to csv
         -
 '''
-# lte - DlTxPhyStats.txt
-# REG_MAC = r'([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+[0-9]+\s+[0-9]+\s+([0-9]+)\s+([0-9]+)\s+[0-9]+\s+([0-9]+)'
-#% time	cellId	IMSI	RNTI	layer	mcs	size	rv	ndi
-#313	1	1	2	0	28	4395	0	1
 
-# Nr - NrDlMacStats.txt
-REG_MAC = r'([0-9\.]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)'
-# % time(s)	cellId	bwpId	IMSI	RNTI	frame	sframe	slot	symStart	numSym	harqId	ndi	rv	mcs	tbSize
-# 0.111	1	0	0	21	11	3	0	1	1	15	1	0	0	114
+# Nr - NrDlCqiStats.txt
+REG_CQI = r'.*Time:\s+([0-9]+\.?[0-9]*)\s+RNTI\s+=\s+([0-9]+)\s+CellID\s+=\s+([0-9]+)\s+achievableRate = ([0-9]+\.?[0-9]*\w?\+?[0-9]*).*CQI\s+([0-9]+)'
+# Time: 0.285 RNTI = 1 CellID = 1 achievableRate = 32000 wideband CQI 15 reported
 
 
 parser = ArgumentParser(description="Parsing the results for web client")
 
 
-parser.add_argument('--opath', '-op',
-                    dest="output_path",
+parser.add_argument('--numUe', '-nu',
+                    dest="num_ue",
                     action="store",
-                    help="Directory where results should be saved",
+                    help="Number of UE in the simulation",
                     required=True)
 
 parser.add_argument('--file', '-f',
                     dest="_file_trace",
                     action="store",
                     help="Trace file which needs to be parsed",
+                    required=True)
+
+parser.add_argument('--opath', '-op',
+                    dest="output_path",
+                    action="store",
+                    help="Directory where results should be saved",
                     required=True)
 parser.add_argument('--totalRb', '-trb',
                     dest="total_rb",
@@ -53,6 +55,21 @@ parser.add_argument('--totalRb', '-trb',
 # Expt parameters
 args = parser.parse_args()
 
+
+_cellid_and_rnti_to_imsi = defaultdict(lambda : defaultdict(int))
+
+def load_mapping():
+    with open('scratch/scripts/ue_mapping.json', 'r') as f:
+        mapping_data = json.load(f)
+    _cellid_and_rnti_to_imsi.clear()
+    for cell_id, rnti_dict in mapping_data['cellid_and_rnti_to_imsi'].items():
+        cell_id = int(cell_id)
+        for rnti, imsi in rnti_dict.items():
+            _cellid_and_rnti_to_imsi[cell_id][int(rnti)] = int(imsi)
+
+load_mapping()
+
+cell_cqi = defaultdict(lambda : defaultdict(list))
 
 def save_metric_to_file(_path,_file_name,header,*values):
  
@@ -74,25 +91,26 @@ def save_metric_to_file(_path,_file_name,header,*values):
     spamwriter.writerow(values) 
     f_out.close()   
 
-print (args._file_trace)
-#infile = open("/home/darijo/workspace/ns-allinone-3.25/ns-3.25/DlTxPhyStats.txt")
+# print (args.output_path)
+
 infile = open(args._file_trace)
 for line in infile:
     #print line
-    content = re.search(REG_MAC,line)
+    content = re.search(REG_CQI,line)
     if content:
        
-        # ue_imsi = content.group(3) lte
-        ue_imsi = content.group(4) # nr
-        #print ue_imsi
-        # save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-MCS.csv",["Time","MCS","TBSize","NDI","CellID_MCS"],str(float(content.group(1))/1000.0),content.group(4),content.group(5),content.group(6),content.group(2))
-        save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-MCS.csv",["Time","MCS","TBSize","NDI","CellID_MCS"],str(float(content.group(1))/1000.0),content.group(14),content.group(15),content.group(12),content.group(2))
+        rnti = int(content.group(2))
+        cell_id = int(content.group(3))
+        cell_cqi[cell_id][content.group(1)].append(int(content.group(5)))
+        ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
+        save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-CQI.csv",["Time","CQI","Ach.Rate","CellID_CQI"],content.group(1),content.group(5),content.group(4),cell_id)
 
-        
 
 infile.close()
 
-
+pf_cqi = pd.DataFrame(cell_cqi)
+fullname = os.path.join(args.output_path,"CELL_CQI.csv")
+pf_cqi.to_csv(fullname,sep=';')
 
 
 

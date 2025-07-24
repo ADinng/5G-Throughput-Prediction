@@ -6,10 +6,11 @@ from collections import defaultdict
 from argparse import ArgumentParser
 import csv
 import pandas as pd
+import json
 from math import log10
 '''Script for parsing UE performance metrics (RSRP/SINR)
 
-    Created by Darijo Raca, MISL, Computer Science, UCC, 06.10.2016.
+    Created by Xingmei Ding, Computer Science, UCC, 23.07.2016.
 
     Tasks:
         - extract each metric to its own file and per user
@@ -17,12 +18,20 @@ from math import log10
         - export results to csv
         -
 '''
-#0.200214	1	1	0	1.6533e-14	34.8546
-REG_RSRP_SINR = r'([0-9]+\.?[0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+\.?[0-9]+\w?-?[0-9]+)\s+([0-9]+\.?[0-9]*)'
+# Time: 0.278214 CellId: 1 RNTI: 1 SINR (dB): 53.9767
+# Time: 0.278214 CellId: 1 RNTI: 2 SINR (dB): 38.4138
+REG_SINR = r'Time:\s+([0-9]+\.[0-9]+)\s+CellId:\s+([0-9]+)\s+RNTI:\s+([0-9]+)\s+SINR\s+\(dB\):\s+([0-9]+\.[0-9]+)'
+
 
 
 parser = ArgumentParser(description="Parsing the results for web client")
 
+
+parser.add_argument('--numUe', '-nu',
+                    dest="num_ue",
+                    action="store",
+                    help="Number of UE in the simulation",
+                    required=True)
 
 parser.add_argument('--file', '-f',
                     dest="_file_trace",
@@ -39,9 +48,20 @@ parser.add_argument('--opath', '-op',
 # Expt parameters
 args = parser.parse_args()
 
+_cellid_and_rnti_to_imsi = defaultdict(lambda : defaultdict(int))
 
-cell_snr = defaultdict(lambda : defaultdict(list))
-cell_rsrp = defaultdict(lambda : defaultdict(list))
+def load_mapping():
+    with open('scratch/scripts/ue_mapping.json', 'r') as f:
+        mapping_data = json.load(f)
+    _cellid_and_rnti_to_imsi.clear()
+    for cell_id, rnti_dict in mapping_data['cellid_and_rnti_to_imsi'].items():
+        cell_id = int(cell_id)
+        for rnti, imsi in rnti_dict.items():
+            _cellid_and_rnti_to_imsi[cell_id][int(rnti)] = int(imsi)
+
+load_mapping()
+
+cell_sinr = defaultdict(lambda : defaultdict(list))
 
 def save_metric_to_file(_path,_file_name,header,*values):
  
@@ -63,36 +83,31 @@ def save_metric_to_file(_path,_file_name,header,*values):
     spamwriter.writerow(values) 
     f_out.close()   
 
-print (args.output_path)
-#infile = open("/home/darijo/workspace/ns-allinone-3.25/ns-3.25/random_static_210-no-op-DlRsrpSinrStats.txt")
+# print (args.output_path)
 infile = open(args._file_trace)
 for line in infile:
     #print line
-    content = re.search(REG_RSRP_SINR,line)
+    content = re.search(REG_SINR,line)
     if content:
        
-        ue_imsi = content.group(3)
+        rnti = int(content.group(3))
         cell_id = int(content.group(2))
-        cell_snr[cell_id][content.group(1)].append(float(content.group(6)))
-        rsrp_temp = np.around(10*log10(float(content.group(5))),decimals=2)
-        cell_rsrp[cell_id][content.group(1)].append(rsrp_temp)
-        #print ue_imsi
-        save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-SINR.csv",["Time","SINR","CellID_SINR"],content.group(1),content.group(6),cell_id)
+        cell_sinr[cell_id][content.group(1)].append(float(content.group(4)))
+        ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
 
-        save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-RSRP.csv",["Time","RSRP","CellID_RSRP"],content.group(1),rsrp_temp,cell_id)
+
+        #sinr
+        save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-SINR.csv",["Time","SINR","CellID_SINR"],content.group(1),content.group(4),cell_id)
 
         
 
 infile.close()
 
 
-pf_snr = pd.DataFrame(cell_snr)
+pf_snr = pd.DataFrame(cell_sinr)
 fullname = os.path.join(args.output_path,"CELL_SINR.csv")
 pf_snr.to_csv(fullname,sep=';')
 
-pf_rsrp = pd.DataFrame(cell_rsrp)
-fullname = os.path.join(args.output_path,"CELL_RSRP.csv")
-pf_rsrp.to_csv(fullname,sep=';')
 
 
 

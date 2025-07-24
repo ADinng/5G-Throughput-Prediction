@@ -48,30 +48,22 @@ def copy_logs(logs_location, save_path):
         # if "Stats" in trace_file:
         if "Stats" in trace_file or "RxPacketTrace" in trace_file:
             os.system("cp %s %s"%(trace_file, save_path))
-            # os.system("rm %s"%(trace_file))
+            os.system("rm %s"%(trace_file))
             
-def parse_mcs(path_to_logs, out_path):
-    # mcs_log = os.path.join(path_to_logs, "DlTxPhyStats.txt") # lte
-    mcs_log = os.path.join(path_to_logs, "NrDlMacStats.txt") # nr
-    print(mcs_log)
+def parse_cqi(path_to_logs, out_path):
+    cqi_log = os.path.join(path_to_logs, "NrDlCqiStats.txt") # nr
+    # print(cqi_log)
     mcs_out_l = os.path.join(out_path, "RAW/")
     os.system("mkdir -p %s"%mcs_out_l)
-    # os.system("python3 mcs2.py -f %s -op %s"%(mcs_log, mcs_out_l)) 
-    os.system("python3 scratch/scripts/mcs2.py -f %s -op %s"%(mcs_log, mcs_out_l))      
+    os.system("python3 scratch/scripts/cqi.py -nu %d -f %s -op %s"%(args.num_ue, cqi_log, mcs_out_l))      
 
-def parse_CQI(path_to_logs, out_path):
-    cqi_log = os.path.join(path_to_logs, "no-op-Stats.txt")
+def parse_THR(path_to_logs, out_path):
+    thr_log = os.path.join(path_to_logs, "no-op-Stats.txt")
     cqi_out_l = os.path.join(out_path, "RAW/")
     os.system("mkdir -p %s"%cqi_out_l)
-    # os.system("python3 UE_parsing.py -nu 60 -f %s -op %s"%(cqi_log, cqi_out_l))  #lte
-    os.system("python3 scratch/scripts/UE_parsing.py -nu %d -f %s -op %s"%(args.num_ue, cqi_log, cqi_out_l))     #nr 
-    # os.system("python3 scratch/scripts/UE_parsing.py -nu %d -f %s -op %s"%(num_ue, cqi_log, cqi_out_l))     #nr 
-
-def parse_RSRP_SINR(path_to_logs, out_path):
-    snr_rsrp_log = os.path.join(path_to_logs, "DlRsrpSinrStats.txt")
-    sr_out_l = os.path.join(out_path, "RAW/")
-    os.system("mkdir -p %s"%sr_out_l)
-    os.system("python3 rsrp_sinr.py -f %s -op %s"%(snr_rsrp_log, sr_out_l))
+    # os.system("python3 UE_parsing.py -nu 60 -f %s -op %s"%(thr_log, cqi_out_l))  #lte
+    os.system("python3 scratch/scripts/UE_parsing.py -nu %d -f %s -op %s"%(args.num_ue, thr_log, cqi_out_l))     #nr 
+    # os.system("python3 scratch/scripts/UE_parsing.py -nu %d -f %s -op %s"%(num_ue, thr_log, cqi_out_l))     #nr 
 
 def parse_pdcp(path_to_logs, out_path):
     # pdcp_log = os.path.join(path_to_logs, "DlPdcpStats.txt") # lte
@@ -81,13 +73,20 @@ def parse_pdcp(path_to_logs, out_path):
     # os.system("python3 pdcp.py -f %s -op %s"%(pdcp_log, pdcp_out_l)) 
     os.system("python3 scratch/scripts/pdcp.py -f %s -op %s"%(pdcp_log, pdcp_out_l))                                                                    
 
-
 def parse_phy(path_to_logs, out_path):
     phy_log = os.path.join(path_to_logs, "RxPacketTrace.txt") 
     phy_out_l = os.path.join(out_path, "RAW/")
     os.system("mkdir -p %s"%phy_out_l)
     os.system("python3 scratch/scripts/phy.py -nu %d -f %s -op %s"%(args.num_ue, phy_log, phy_out_l))  
     # os.system("python3 scratch/scripts/phy.py -nu %d -f %s -op %s"%(num_ue, phy_log, phy_out_l))   
+
+def parse_sinr(path_to_logs, out_path):
+    sinr_log = os.path.join(path_to_logs, "NrDlSinrStats.txt") # nr
+    # print(sinr_log)
+    mcs_out_l = os.path.join(out_path, "RAW/")
+    os.system("mkdir -p %s"%mcs_out_l)
+    os.system("python3 scratch/scripts/sinr.py -nu %d -f %s -op %s"%(args.num_ue, sinr_log, mcs_out_l))      
+
 
 def create_competing_metrics(metric, input_path, out_path):
     # os.system("python3 scratch/scripts/network_metric.py -nu %d -ms %s -p %s -op %s"%(num_ue, metric,
@@ -107,9 +106,11 @@ if __name__ == "__main__":
         print (os.getcwd())
         print (os.path.dirname(os.path.abspath(__file__)))
         
-        parse_CQI(args.output_path + "/logs", args.output_path)
+        parse_THR(args.output_path + "/logs", args.output_path)
         parse_pdcp(args.output_path+"/logs/", args.output_path)
         parse_phy(args.output_path + "/logs", args.output_path)
+        parse_cqi(args.output_path + "/logs", args.output_path)
+        parse_sinr(args.output_path + "/logs", args.output_path)
         
         create_competing_metrics("SINR", args.output_path+"/RAW/",args.output_path+"/CMetrics/")
         create_competing_metrics("CQI", args.output_path+"/RAW/", args.output_path+"/CMetrics/")

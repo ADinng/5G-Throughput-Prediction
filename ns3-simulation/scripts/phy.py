@@ -9,15 +9,16 @@ import csv
 import json
 
 
-'''
-Script for parsing UE performance metrics (PHY layer)[RxPacketTrace.txt]
+'''Script for parsing UE performance metrics (RB utilisation)
 
-    Created by Xingmei Ding, Computer Science, UCC, 09.06.2025.
+    Created by Darijo Raca, MISL, Computer Science, UCC, 13.10.2016.
+    Updated by Xingmei Ding, Computer Science, UCC, 09.06.2025.
 
     Tasks:
         - extract each metric to its own file and per user
         - group all metrics per user and align with timeline
         - export results to csv
+        -
 '''
 
 # nr- RxPacketTrace.txt
@@ -109,7 +110,7 @@ for line in infile:
         ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
         
 
-        cell_snr[cell_id][content.group(1)].append(float(content.group(15)))
+        # cell_snr[cell_id][content.group(1)].append(float(content.group(15)))
 
         # cell_cqi[cell_id][content.group(1)].append(int(content.group(16)))
         achievableRate = (float(content.group(11)) * 8.0) / 0.001;
@@ -121,11 +122,11 @@ for line in infile:
             # mcs
             save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-MCS.csv",["Time","MCS","TBSize","RV","CellID_MCS"],str(float(content.group(1))/1000.0),content.group(12),content.group(11),content.group(14),cell_id)
         
-            # sinr
-            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-SINR.csv",["Time","SINR","CellID_SINR"],content.group(1),content.group(15),cell_id)
+            # # sinr
+            # save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-SINR.csv",["Time","SINR","CellID_SINR"],content.group(1),content.group(15),cell_id)
 
-            # cqi
-            save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-CQI.csv",["Time","CQI","Ach.Rate","CellID_CQI"],content.group(1),content.group(16),achievableRate,cell_id)
+            # # cqi
+            # save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-CQI.csv",["Time","CQI","Ach.Rate","CellID_CQI"],content.group(1),content.group(16),achievableRate,cell_id)
 
 
             # tbler
@@ -136,10 +137,10 @@ for line in infile:
 infile.close()
 
 
-pf_snr = pd.DataFrame(cell_snr)
-fullname = os.path.join(args.output_path,"CELL_SINR.csv")
-pf_snr.to_csv(fullname,sep=';')
+# pf_snr = pd.DataFrame(cell_snr)
+# fullname = os.path.join(args.output_path,"CELL_SINR.csv")
+# pf_snr.to_csv(fullname,sep=';')
 
-pf_cqi = pd.DataFrame(cell_cqi)
-fullname = os.path.join(args.output_path,"CELL_CQI.csv")
-pf_cqi.to_csv(fullname,sep=';')
+# pf_cqi = pd.DataFrame(cell_cqi)
+# fullname = os.path.join(args.output_path,"CELL_CQI.csv")
+# pf_cqi.to_csv(fullname,sep=';')
