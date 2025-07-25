@@ -107,14 +107,6 @@ CourseChange(std::string foo, Ptr<const MobilityModel> mobility)
 }
 
 
-void CqiTrace(std::string context, uint16_t cellId, uint16_t rnti, double rsrp, double sinr, bool isServingCell, uint8_t componentCarrierId)
-{
-    std::cout << "[CQI] " << context << " CellId=" << cellId << " RNTI=" << rnti
-              << " RSRP=" << rsrp << " SINR=" << sinr << " ServingCell=" << isServingCell
-              << " CCId=" << (int)componentCarrierId << std::endl;
-}
-
-
 struct UeRssiInfo {
     double rssi_dBm = NaN;
     double time = NaN;
@@ -181,18 +173,31 @@ ReportUeMeasurementsCallback(
     }
 }
 
+void
+DlDataSinrTracedCallback(uint16_t cellId, uint16_t rnti, double sinr, uint16_t bwpId)
+{
+    std::ofstream outFile("NrDlSinrStats.txt", std::ios::app);
+    double sinrDb = 10 * std::log10(sinr);
+    outFile << "Time: " << ns3::Simulator::Now().GetSeconds()
+            << " CellId: " << cellId
+            << " RNTI: " << rnti
+            << " SINR (dB): " << sinrDb
+            << std::endl;
+    outFile.close();
+}
 
 
 int
 main(int argc, char* argv[])
 {
     
+    std::ofstream("NrDlCqiStats.txt", std::ios::trunc).close();
     bool logging = true; 
     double simTime = 100;    // in second
 
     uint32_t nGnb = 1;
     double nUes = 20;
-    double ueDiscRadius = 200; //The radius of the user distribution disc (in meters); all UEs will be randomly placed within this circle centered at the base station
+    double ueDiscRadius = 300; //The radius of the user distribution disc (in meters); all UEs will be randomly placed within this circle centered at the base station
     uint16_t outdoorUeMinSpeed = 15.0;
     uint16_t outdoorUeMaxSpeed = 20.0;
     // set mobility model: steady, gauss
@@ -226,7 +231,7 @@ main(int argc, char* argv[])
     bool idealBeamform = true;
 
     bool enableOfdma = false;
-    std::string schedulerType = "RR";
+    std::string schedulerType = "PF";
 
     bool isLos = true;
     int channelConditionUpdatePeriod = 0;
@@ -234,12 +239,12 @@ main(int argc, char* argv[])
     bool enableFading = true;
 
     bool enableMimoFeedback = false;
-    uint32_t ueNumRows = 1;
-    uint32_t ueNumColumns = 1;
+    uint32_t ueNumRows = 2;
+    uint32_t ueNumColumns = 2;
     bool ueIsoAntennaModel = true;
 
-    uint32_t gnbNumRows = 1;
-    uint32_t gnbNumColumns = 2;
+    uint32_t gnbNumRows = 8;
+    uint32_t gnbNumColumns = 8;
     bool gNbIsoAntennaModel = true;
 
     bool enableGnbAntennaArrayConfig = true;
@@ -283,7 +288,7 @@ main(int argc, char* argv[])
         // LogComponentEnable("NrMacSchedulerTdmaPF", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUeMac", LOG_LEVEL_INFO);
         // LogComponentEnable("NrUeRrc", LOG_LEVEL_INFO);
-        // LogComponentEnable("NrUePhy", LOG_LEVEL_DEBUG);
+        // LogComponentEnable("NrUePhy", LOG_LEVEL_INFO);
         // LogComponentEnable("NrRlcAm", LOG_LEVEL_LOGIC);
     }
 
@@ -745,6 +750,7 @@ main(int argc, char* argv[])
                     OnOffHelper dlClient("ns3::TcpSocketFactory", InetSocketAddress(ueIpIface.GetAddress(u), dlPort));
                     dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=20.0|Max=25.0]"));
                     dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=10.0|Max=15.0]"));
+                    // dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
                     // dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
                     dlClient.SetAttribute("MaxBytes", UintegerValue(0));
                     clientApps.Add(dlClient.Install(remoteHost));
@@ -786,11 +792,9 @@ main(int argc, char* argv[])
     // clientApps.Stop(Seconds(simTime - 0.2));
 
     nrHelper->EnableTraces();
-
-
-    // Config::Connect("/NodeList/*/DeviceList/*/ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
-    //                 MakeCallback(&CqiTrace)
-    // );
+    std::ofstream("NrDlSinrStats.txt", std::ios::trunc).close();
+    Config::ConnectWithoutContext("/NodeList/*/DeviceList/*/$ns3::NrNetDevice/$ns3::NrUeNetDevice/"
+                "ComponentCarrierMapUe/*/NrUePhy/DlDataSinr",MakeCallback(&DlDataSinrTracedCallback));
 
     // Register callback for UE RRC connection established event
     Config::Connect("/NodeList/*/DeviceList/*/NrUeRrc/ConnectionEstablished",
