@@ -193,11 +193,11 @@ main(int argc, char* argv[])
     
     std::ofstream("NrDlCqiStats.txt", std::ios::trunc).close();
     bool logging = true; 
-    double simTime = 100;    // in second
+    double simTime = 1000;    // in second
 
     uint32_t nGnb = 1;
     double nUes = 20;
-    double ueDiscRadius = 300; //The radius of the user distribution disc (in meters); all UEs will be randomly placed within this circle centered at the base station
+    double ueDiscRadius = 350; //The radius of the user distribution disc (in meters); all UEs will be randomly placed within this circle centered at the base station
     uint16_t outdoorUeMinSpeed = 15.0;
     uint16_t outdoorUeMaxSpeed = 20.0;
     // set mobility model: steady, gauss
@@ -231,7 +231,7 @@ main(int argc, char* argv[])
     bool idealBeamform = true;
 
     bool enableOfdma = false;
-    std::string schedulerType = "PF";
+    std::string schedulerType = "RR";
 
     bool isLos = true;
     int channelConditionUpdatePeriod = 0;
@@ -239,12 +239,12 @@ main(int argc, char* argv[])
     bool enableFading = true;
 
     bool enableMimoFeedback = false;
-    uint32_t ueNumRows = 2;
-    uint32_t ueNumColumns = 2;
+    uint32_t ueNumRows = 1;
+    uint32_t ueNumColumns = 1;
     bool ueIsoAntennaModel = true;
 
-    uint32_t gnbNumRows = 8;
-    uint32_t gnbNumColumns = 8;
+    uint32_t gnbNumRows = 1;
+    uint32_t gnbNumColumns = 2;
     bool gNbIsoAntennaModel = true;
 
     bool enableGnbAntennaArrayConfig = true;
@@ -350,7 +350,7 @@ main(int argc, char* argv[])
     ueDiscPositionAlloc->SetY(0.0);
     ueDiscPositionAlloc->SetZ(hUT);
     Ptr<UniformRandomVariable> randomDiscPos = CreateObject<UniformRandomVariable>();
-    randomDiscPos->SetAttribute("Min", DoubleValue(0));
+    randomDiscPos->SetAttribute("Min", DoubleValue(20));
     randomDiscPos->SetAttribute("Max", DoubleValue(ueDiscRadius));
     ueDiscPositionAlloc->SetRho(randomDiscPos);
     ueMobility.SetPositionAllocator(ueDiscPositionAlloc);
@@ -748,10 +748,10 @@ main(int argc, char* argv[])
                     NS_LOG_LOGIC("installing TCP DL ON OFF app for UE " << u);
                     // NS_LOG_UNCOND("installing TCP DL ON OFF app for UE " << u);
                     OnOffHelper dlClient("ns3::TcpSocketFactory", InetSocketAddress(ueIpIface.GetAddress(u), dlPort));
-                    dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=20.0|Max=25.0]"));
-                    dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=10.0|Max=15.0]"));
-                    // dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
-                    // dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
+                    // dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=20.0|Max=25.0]"));
+                    // dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=10.0|Max=15.0]"));
+                    dlClient.SetAttribute("OnTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
+                    dlClient.SetAttribute("OffTime", StringValue("ns3::UniformRandomVariable[Min=15.0|Max=25.0]"));
                     dlClient.SetAttribute("MaxBytes", UintegerValue(0));
                     clientApps.Add(dlClient.Install(remoteHost));
                     PacketSinkHelper dlPacketSinkHelper("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), dlPort));
