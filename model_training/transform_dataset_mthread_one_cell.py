@@ -6,6 +6,7 @@ import argparse
 import numpy as np
 import multiprocessing as MP
 from functools import partial
+import warnings
 
 
 # regex for the trace logs
@@ -142,9 +143,13 @@ def calc_new_dataset(_history, _future, new_cols, df, trace_name, config):
     else:
     
         full_out_path = os.path.join(config["output_path"], trace_name+"_H%dF%d_cleaned.csv"%(config["history"], config["horizon"]))
-    new_df.fillna(-1,inplace=True)
-    new_df = new_df.infer_objects(copy=False)
     
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", FutureWarning)
+        new_df.fillna(-1, inplace=True)
+    # new_df.fillna(-1,inplace=True)
+    # new_df = new_df.infer_objects(copy=False)
+
     if new_df[config["target_metric"]].dtype != 'object':
         new_df = new_df[new_df[config["target_metric"]] > -1]
     _cols = sorted(list(new_df.columns.values))
