@@ -1,5 +1,11 @@
 # Development Log (dev_log.md)
 
+## 2025-07-27
+**[model_training/transform_dataset_mthread_one_cell.cc]**
+- Modified the multithreaded data preprocessing workflow to resolve argument passing issues in macOS multiprocessing by using an explicit config dictionary instead of relying on argparse global variables.
+**[model_training/run_transf_mruns.cc]**
+- run the script twice with active_only set to true and false respectively, both runs successfully.
+
 ## 2025-07-05
 **[ns3-simulation/5g_sim.cc]**
 - Updated antenna and beamforming configuration:
