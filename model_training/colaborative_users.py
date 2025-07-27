@@ -42,8 +42,7 @@ def prepare_pdf_comp_users(path_list, comp_u_ids, start_time = 0):
 
 def calc_stats(pdf_, list_pdfs):
         
-    # feat_list = ["CQI", "PDCP_Throughput", "THR", "Delay", "RSRP", "SINR"]
-    feat_list = ["CQI", "THR", "RSRP", "SINR"]
+    feat_list = ["CQI", "PDCP_Throughput", "THR", "Delay", "RSRP", "SINR"]
     
     for feature in feat_list:
         for stat in ["min", "max", "mean", "25%", "50%", "75%", "std"]:

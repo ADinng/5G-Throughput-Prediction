@@ -14,11 +14,11 @@ cmps = [100]
 # cmps = [10, 50]
 
 
+history = 5
+horizon = 5
+
 # history = 5
 # horizon = 2
-
-history = 5
-horizon = 2
 
 if __name__ == "__main__":
   args = parser.parse_args()
@@ -30,7 +30,8 @@ if __name__ == "__main__":
       name = args.output_path.strip("/") + "_H%dH%d"%(history, horizon)
       final_out_name = os.path.join(name, "Run_%d"%run + "/CMP%d"%cmp_)
       print(input_folder)
+      # print(final_out_name)
       # os.system("python transform_dataset_mthread_one_cell.py --active_only False --folder_path %s --output_path %s --target_metric THR --history %d --horizon %d"%(input_folder, final_out_name, history, horizon))
-      os.system("python transform_dataset_mthread_one_cell.py --active_only %s --folder_path %s --output_path %s --target_metric THR --history %d --horizon %d"%(args.active_only, input_folder, final_out_name, history, horizon))
+      os.system("python model_training/transform_dataset_mthread_one_cell.py --active_only %s --folder_path %s --output_path %s --target_metric THR --history %d --horizon %d"%(args.active_only, input_folder, final_out_name, history, horizon))
       # python transform_dataset_mthread_one_cell.py --folder_path ../one_cell_U45_AR_1000s/filtered/ --output_path ../final_dataset_U45_AR_1000s/CMP0/ --target_metric THR --history 5 --horizon 5
 

@@ -5,11 +5,12 @@ import re
 import argparse
 import numpy as np
 import multiprocessing as MP
+from functools import partial
 
 
 # regex for the trace logs
 REG_MEASUREMENT_TRACE = r"\w+_P[0-9]+_final\.csv"   # UE1_C1_N1_S0_P0_final 
-REG_MEASUREMENT_TRACE = r".*\.csv" 
+# REG_MEASUREMENT_TRACE = r".*\.csv" 
 #REG_MEASUREMENT_TRACE = "\w+.*-comb_filtered\.csv"   # UE1_C1_N1_S0_P0_final UE_1-comb_filtered_C25_R1_P0_final
 # regex for the folder structure 2023-09-14-15-43-26_N5_R1
 REG_MEASUREMENT_FOLDER = r"\w+/(CMP[0-9]+)/"  # ../col_training/CMP1/UE1_C4_N1_S3_P1_final.csv
@@ -65,41 +66,47 @@ def load_trace(full_path, _features):
     pdf = pd.read_csv(full_path, usecols=_features)
     return pdf
 
-def create_new_col_names(_history, _cols, **kwargs):
+# def create_new_col_names(_history, _cols, **kwargs):
+def create_new_col_names(_history, _cols, target_metric, dtype):
                   
     new_names_col = set()
     for col in _cols:
-        if col == args.target_metric and kwargs["type"] == 'object':
+        # if col == args.target_metric and kwargs["type"] == 'object':
+        if col == target_metric and dtype == 'object':
             continue
         for i in range(_history):
             new_names_col.add(col+"-"+str(i))
-    new_names_col.add(args.target_metric)
+    # new_names_col.add(args.target_metric)
+    new_names_col.add(target_metric)
 
     return new_names_col
 
-def calc_new_dataset(_history, _future, new_cols, df, trace_name):
+# def calc_new_dataset(_history, _future, new_cols, df, trace_name):
+def calc_new_dataset(_history, _future, new_cols, df, trace_name, config):
     tr_len = len(df.index)  
-    print(new_cols)
+    # print(new_cols)
     new_df = pd.DataFrame(index=range(tr_len-(_history+_future-1)), columns = list(new_cols))
     new_df["Drop"] = 0
     for i in range(_history-1, tr_len-_future):
         for j in range(_history):
             for z in df.columns:
-                if z == args.target_metric and df[z].dtype == 'object':
+                # if z == args.target_metric and df[z].dtype == 'object':
+                if z == config["target_metric"] and df[z].dtype == 'object':
                     continue
                 
                 #new_df[z+"-"+str(j)].iloc[i+1-_history] = df[z].iloc[i-j]
                 new_df.loc[i+1-_history, z+"-"+str(j)] = df[z].iloc[i-j]
 
 
-
-        future_array = df.iloc[i+1:i+1+_future,:][args.target_metric].values
+        # future_array = df.iloc[i+1:i+1+_future,:][args.target_metric].values
+        future_array = df.iloc[i+1:i+1+_future,:][config["target_metric"]].values
         
         # logic for dropping rows if incomplete history or future
         future_activity_array = df.iloc[i+1:i+1+_future,:]["Tx"].values
         history_activity_array = df.iloc[i-_history:i,:]["Tx"].values
         # we want to drop either rows that don't have full history or otherwise
-        if args.active_only == "True":
+        # if args.active_only == "True":
+        if config["active_only"] == "True":
            if np.sum(history_activity_array) < _history:
               new_df.loc[i+1-_history, "Drop"] = 1
         else:
@@ -115,38 +122,42 @@ def calc_new_dataset(_history, _future, new_cols, df, trace_name):
         if len(future_array) == 0:
             print("No future mean: " + str(np.mean(future_array)))
             #new_df[args.target_metric].iloc[i+1-_history] = np.nanmean(future_array)
-            new_df.loc[i+1-_history, args.target_metric] = np.nanmean(future_array)
+            new_df.loc[i+1-_history, config["target_metric"]] = np.nanmean(future_array)
             
             
         else:
             if isinstance(future_array[0], str) and _future == 1:
                 
                 #new_df[args.target_metric].iloc[i+1-_history] = future_array[_future-1] 
-                new_df.loc[i+1-_history, args.target_metric] = future_array[_future-1] 
+                new_df.loc[i+1-_history, config["target_metric"]] = future_array[_future-1] 
             else:
                 
                 #new_df[args.target_metric].iloc[i+1-_history] = int(np.nanmean(future_array)) 
-                new_df.loc[i+1-_history, args.target_metric] = int(np.nanmean(future_array))  
+                new_df.loc[i+1-_history, config["target_metric"]] = int(np.nanmean(future_array))  
           
-    os.system("mkdir -p %s"%args.output_path)
-    if args.suffix is not None:
-        full_out_path = os.path.join(args.output_path, trace_name+"_UE%s_H%dF%d_cleaned.csv"%( args.suffix, int(args.history), int(args.horizon)))
+    # os.system("mkdir -p %s"%args.output_path)
+    os.system("mkdir -p %s"%config["output_path"])
+    if config["suffix"] is not None:
+        full_out_path = os.path.join(config["output_path"], trace_name+"_UE%s_H%dF%d_cleaned.csv"%( config["suffix"], config["history"], config["horizon"]))
     else:
     
-        full_out_path = os.path.join(args.output_path, trace_name+"_H%dF%d_cleaned.csv"%(int(args.history), int(args.horizon)))
+        full_out_path = os.path.join(config["output_path"], trace_name+"_H%dF%d_cleaned.csv"%(config["history"], config["horizon"]))
     new_df.fillna(-1,inplace=True)
-    if new_df[args.target_metric].dtype != 'object':
-        new_df = new_df[new_df[args.target_metric] > -1]
+    new_df = new_df.infer_objects(copy=False)
+    
+    if new_df[config["target_metric"]].dtype != 'object':
+        new_df = new_df[new_df[config["target_metric"]] > -1]
     _cols = sorted(list(new_df.columns.values))
-    _cols.pop(_cols.index(args.target_metric))
-    _cols.append(args.target_metric)
+    _cols.pop(_cols.index(config["target_metric"]))
+    _cols.append(config["target_metric"])
     new_df = new_df.reindex(_cols, axis=1)
     # drop rows where there is no activity in past and future
     new_df = new_df[new_df['Drop'] != 1]
     if  not new_df.empty:
         new_df.to_csv(full_out_path, index=False)
 
-def make_new_logs(trace):
+# def make_new_logs(trace):
+def make_new_logs(trace, config):
     
     # print (trace)
     #match_ = re.search(REG_MEASUREMENT_FOLDER, trace)
@@ -154,11 +165,13 @@ def make_new_logs(trace):
     # print("------")
     r_pdf = load_trace(trace, FEATURE_LIST)
     org_cols = r_pdf.columns
-    n_cols = create_new_col_names(int(args.history), org_cols, type=r_pdf[args.target_metric].dtype)
+    # n_cols = create_new_col_names(int(args.history), org_cols, type=r_pdf[args.target_metric].dtype)
+    n_cols = create_new_col_names(config["history"], org_cols, target_metric=config["target_metric"], dtype=r_pdf[config["target_metric"]].dtype)
     fill_missing_val(r_pdf)
     
     out_trace_name = trace.split("/")[-1].split(".csv")[0]
-    calc_new_dataset(int(args.history), int(args.horizon), n_cols, r_pdf, out_trace_name)
+    # calc_new_dataset(int(args.history), int(args.horizon), n_cols, r_pdf, out_trace_name)
+    calc_new_dataset(config["history"], config["horizon"], n_cols, r_pdf, out_trace_name, config)
     
 def fill_missing_val(df):
     for feat in IMP_VAL:
@@ -173,7 +186,20 @@ if __name__ == "__main__" :
     args = parser.parse_args()
     print (args.folder_path)
     meas_traces = list_traces(args.folder_path, REG_MEASUREMENT_TRACE)
-    print(meas_traces)
+    # print(meas_traces)
+
+    config = {
+        "history": int(args.history),
+        "horizon": int(args.horizon),
+        "target_metric": args.target_metric,
+        "suffix": args.suffix,
+        "output_path": args.output_path,
+        "active_only": args.active_only
+    }
+
+    make_new_logs_partial = partial(make_new_logs, config=config)
+
     with MP.Pool(MP.cpu_count()) as p:
         print("COUNT: ", MP.cpu_count())
-        p.map(make_new_logs, meas_traces)
+        # p.map(make_new_logs, meas_traces)
+        p.map(make_new_logs_partial, meas_traces)

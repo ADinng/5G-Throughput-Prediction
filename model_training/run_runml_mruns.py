@@ -12,7 +12,7 @@ cmps = [10, 50]
 
 
 history = 5
-horizon = 2
+horizon = 5
 
 
 if __name__ == "__main__":
