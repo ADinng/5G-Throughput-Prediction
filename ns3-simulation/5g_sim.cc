@@ -22,6 +22,7 @@
 #include "ns3/callback.h"
 #include "ns3/hexagonal-grid-scenario-helper.h"
 #include "ns3/realistic-beamforming-algorithm.h"
+#include "cqilog_stream.h"
 
 
 using namespace ns3;
@@ -173,18 +174,19 @@ ReportUeMeasurementsCallback(
     }
 }
 
+std::ofstream outSinrFile("NrDlSinrStats.txt", std::ios::app);
 void
 DlDataSinrTracedCallback(uint16_t cellId, uint16_t rnti, double sinr, uint16_t bwpId)
 {
-    std::ofstream outFile("NrDlSinrStats.txt", std::ios::app);
     double sinrDb = 10 * std::log10(sinr);
-    outFile << "Time: " << ns3::Simulator::Now().GetSeconds()
-            << " CellId: " << cellId
-            << " RNTI: " << rnti
-            << " SINR (dB): " << sinrDb
-            << std::endl;
-    outFile.close();
+    outSinrFile << "Time: " << ns3::Simulator::Now().GetSeconds()
+                << " CellId: " << cellId
+                << " RNTI: " << rnti
+                << " SINR (dB): " << sinrDb
+                // << std::endl;
+                << "\n";
 }
+
 
 
 int
@@ -192,11 +194,15 @@ main(int argc, char* argv[])
 {
     
     std::ofstream("NrDlCqiStats.txt", std::ios::trunc).close();
+    std::ofstream("NrDlSinrStats.txt", std::ios::trunc).close();
+    outCqiFile.open("NrDlCqiStats.txt");  
+
+
     bool logging = true; 
     double simTime = 1000;    // in second
 
     uint32_t nGnb = 1;
-    double nUes = 20;
+    double nUes = 40;
     double ueDiscRadius = 350; //The radius of the user distribution disc (in meters); all UEs will be randomly placed within this circle centered at the base station
     uint16_t outdoorUeMinSpeed = 15.0;
     uint16_t outdoorUeMaxSpeed = 20.0;
@@ -792,7 +798,6 @@ main(int argc, char* argv[])
     // clientApps.Stop(Seconds(simTime - 0.2));
 
     nrHelper->EnableTraces();
-    std::ofstream("NrDlSinrStats.txt", std::ios::trunc).close();
     Config::ConnectWithoutContext("/NodeList/*/DeviceList/*/$ns3::NrNetDevice/$ns3::NrUeNetDevice/"
                 "ComponentCarrierMapUe/*/NrUePhy/DlDataSinr",MakeCallback(&DlDataSinrTracedCallback));
 
@@ -811,8 +816,6 @@ main(int argc, char* argv[])
                 "ComponentCarrierMapUe/*/NrUePhy/ReportUeMeasurements",
                 MakeBoundCallback(&ReportUeMeasurementsCallback));
 
-
-
     Simulator::Schedule (Seconds (0.4), &CalculateThroughput,100);
 
     for (uint32_t i = 0; i < ueNetDev.GetN(); i++)
@@ -828,15 +831,16 @@ main(int argc, char* argv[])
     std::cout << "Starting simulation..." << std::endl;
     Simulator::Run();
     std::cout << "Simulation finished." << std::endl;
-
-    Ptr<NrUeNetDevice> nrUeDev = DynamicCast<NrUeNetDevice>(ueNetDev.Get(0));
-    Ptr<NrPhy> uePhy = nrUeDev->GetPhy(0);
-    numRbs_global = uePhy->GetRbNum();
-    std::cout << "numRbs = " << uePhy->GetRbNum() << std::endl;
-    std::cout << "m_channelBandwidth = " << uePhy->GetChannelBandwidth() << std::endl;
-    std::cout << "m_subcarrierSpacing = " << uePhy->GetSubcarrierSpacing() << std::endl;
+    outSinrFile.close();
+    outCqiFile.close();
 
 
+    // Ptr<NrUeNetDevice> nrUeDev = DynamicCast<NrUeNetDevice>(ueNetDev.Get(0));
+    // Ptr<NrPhy> uePhy = nrUeDev->GetPhy(0);
+    // numRbs_global = uePhy->GetRbNum();
+    // std::cout << "numRbs = " << uePhy->GetRbNum() << std::endl;
+    // std::cout << "m_channelBandwidth = " << uePhy->GetChannelBandwidth() << std::endl;
+    // std::cout << "m_subcarrierSpacing = " << uePhy->GetSubcarrierSpacing() << std::endl;
 
     nrHelper = nullptr;
     Simulator::Destroy();

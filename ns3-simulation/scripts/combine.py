@@ -11,6 +11,7 @@ import csv
 '''Script for combining UE performance metrics
 
     Created by Darijo Raca, MISL, Computer Science, UCC, 14.10.2016.
+    Updated by Xingmei Ding, Computer Science, UCC, 12.06.2025.
 
     Tasks:
         - take folder as a input

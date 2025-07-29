@@ -14,6 +14,7 @@
 
 #include <ns3/log.h>
 #include <ns3/nr-spectrum-value-helper.h>
+#include "cqilog_stream.h"
 
 namespace ns3
 {
@@ -175,16 +176,17 @@ NrMacSchedulerCQIManagement::DlWBCQIReported(const DlCqiInfo& info,
                 << " Achievable Rate = " << achievableRate << " bps");
 
     
-    std::ofstream cqilogFile("NrDlCqiStats.txt", std::ios::app);  
-    cqilogFile << "Time: " << Simulator::Now().GetSeconds()
+    // std::ofstream outCqiFile("NrDlCqiStats.txt", std::ios::app);  
+    outCqiFile << "Time: " << Simulator::Now().GetSeconds()
             << " RNTI = " << ueInfo->m_rnti
             << " CellID = " << GetCellId()
             << " achievableRate = " << achievableRate
             << " wideband CQI " << static_cast<uint32_t>(ueInfo->m_dlCqi.m_wbCqi)
             << " reported"
-            << std::endl;
+            // << std::endl;
+            << "\n";
 
-    cqilogFile.close();
+    // outCqiFile.close();
 
 
     // std::cout << "Time: " << Simulator::Now().GetSeconds()
