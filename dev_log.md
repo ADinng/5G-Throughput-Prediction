@@ -1,5 +1,22 @@
 # Development Log (dev_log.md)
 
+## 2025-07-29
+**[ns3-simulation/5g_sim.cc]**
+- Optimized SINR and CQI logging to reduce I/O overhead and simulation time.
+- Opened log files (`NrDlSinrStats.txt`, `NrDlCqiStats.txt`) once at simulation start and closed them after simulation ends.
+- Replaced `std::endl` with `"\n"` to avoid frequent flushing.
+
+**[ns3-simulation/cqilog_stream.{h,cc}]**
+- Implemented CQI logging management originally designed for `contrib/nr/model/` in ns-3.
+- Added new source files to manage CQI logging globally.
+- Declared `outCqiFile` as a shared output stream across modules.
+
+**[ns3-simulation/nr-mac-scheduler-cqi-management.cc]**
+- Modified CQI logging logic from the original ns-3 source file located at `contrib/nr/model/nr-mac-scheduler-cqi-management.cc`.
+- Redirected CQI logging to use `outCqiFile` without opening/closing per write.
+- Replaced `std::endl` with `"\n"` to avoid frequent flushing.
+
+
 ## 2025-07-27
 **[model_training/transform_dataset_mthread_one_cell.cc]**
 - Modified the multithreaded data preprocessing workflow to resolve argument passing issues in macOS multiprocessing by using an explicit config dictionary instead of relying on argparse global variables.
