@@ -64,21 +64,11 @@ def summarize_parameters(df,metric,ue_prefix):
     comp_cl = df.iloc[:,[0,1,-1]]
     for row in comp_cl.itertuples():
         curr_time = row[1]
-     
-        cqi_curr = float(row[2])
         cellid = str(row[-1])
-        # print (cellid)
-        # print (new_pdf._get_value(curr_time,cellid))
-        # dd = ''.join(new_pdf._get_value(curr_time,cellid)[1:-1].split()) 
-
-        # dd = ''.join(new_pdf.loc[curr_time,cellid][1:-1].split()) 
-        # fin = list(map(float,dd.split(',')))
-
         val = new_pdf.loc[curr_time,cellid]
         fin = list(map(float, ast.literal_eval(val)))
         fin = np.around(fin,decimals=3).tolist()
-        #print fin
-        cqi_curr = np.around(cqi_curr,decimals=3)
+        cqi_curr = np.around(float(row[2]),decimals=3)
         #print cqi_curr
         try:
             fin.remove(cqi_curr)
