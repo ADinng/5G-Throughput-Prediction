@@ -67,15 +67,13 @@ def summarize_parameters(df,metric,ue_prefix):
         cqi_curr = float(row[2])
         cellid = str(row[-1])
         # print (cellid)
-        # print (ue_prefix)
         # print (new_pdf._get_value(curr_time,cellid))
-        dd = ''.join(new_pdf._get_value(curr_time,cellid)[1:-1].split()) 
+        # dd = ''.join(new_pdf._get_value(curr_time,cellid)[1:-1].split()) 
+        dd = ''.join(new_pdf.loc[curr_time,cellid][1:-1].split()) 
         fin = list(map(float,dd.split(',')))
         fin = np.around(fin,decimals=3).tolist()
         #print fin
         cqi_curr = np.around(cqi_curr,decimals=3)
-        #print fin
-        #print cqi_curr
         #print cqi_curr
         try:
             fin.remove(cqi_curr)
@@ -92,15 +90,19 @@ def summarize_parameters(df,metric,ue_prefix):
         
             if step_forward_time in new_pdf.index:
             
-                if type(new_pdf._get_value(step_forward_time,cellid)) is str:
+                # if type(new_pdf._get_value(step_forward_time,cellid)) is str:
+                if type(new_pdf.loc[step_forward_time,cellid]) is str:
              
-                 f_a = ''.join(new_pdf._get_value(step_forward_time,cellid)[1:-1].split()) 
+                #  f_a = ''.join(new_pdf._get_value(step_forward_time,cellid)[1:-1].split()) 
+                 f_a = ''.join(new_pdf.loc[step_forward_time,cellid][1:-1].split()) 
                  ff_a = list(map(float,f_a.split(',')))
                  #print ff_a
             elif step_back_time in new_pdf.index:
             
-                if type(new_pdf._get_value(step_back_time,cellid)) is str:
-                 f_a = ''.join(new_pdf._get_value(step_back_time,cellid)[1:-1].split()) 
+                # if type(new_pdf._get_value(step_back_time,cellid)) is str:
+                if type(new_pdf.loc[step_back_time,cellid]) is str:
+                 f_a = ''.join(new_pdf.loc[step_back_time,cellid][1:-1].split()) 
+                #  f_a = ''.join(new_pdf._get_value(step_back_time,cellid)[1:-1].split()) 
                  ff_a = list(map(float,f_a.split(',')))
                  #print ff_a
         fin = fin + ff_a

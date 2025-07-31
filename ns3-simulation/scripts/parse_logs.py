@@ -58,7 +58,7 @@ def copy_logs(logs_location, save_path):
         if basename in keywords:
         # if any (k in trace_file for k in keywords):
             os.system("cp %s %s"%(trace_file, save_path))
-            os.system("rm %s"%(trace_file))
+            # os.system("rm %s"%(trace_file))
             
 def parse_cqi(path_to_logs, out_path):
     cqi_log = os.path.join(path_to_logs, "NrDlCqiStats.txt") # nr
