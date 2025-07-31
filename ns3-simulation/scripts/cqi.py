@@ -21,7 +21,7 @@ import json
 '''
 
 # Nr - NrDlCqiStats.txt
-REG_CQI = r'.*Time:\s+([0-9]+\.?[0-9]*)\s+RNTI\s+=\s+([0-9]+)\s+CellID\s+=\s+([0-9]+)\s+achievableRate = ([0-9]+\.?[0-9]*\w?\+?[0-9]*).*CQI\s+([0-9]+)'
+# REG_CQI = r'.*Time:\s+([0-9]+\.?[0-9]*)\s+RNTI\s+=\s+([0-9]+)\s+CellID\s+=\s+([0-9]+)\s+achievableRate = ([0-9]+\.?[0-9]*\w?\+?[0-9]*).*CQI\s+([0-9]+)'
 # Time: 0.285 RNTI = 1 CellID = 1 achievableRate = 32000 wideband CQI 15 reported
 
 
@@ -93,20 +93,48 @@ def save_metric_to_file(_path,_file_name,header,*values):
 
 # print (args.output_path)
 
-infile = open(args._file_trace)
-for line in infile:
-    #print line
-    content = re.search(REG_CQI,line)
-    if content:
+# infile = open(args._file_trace)
+# for line in infile:
+#     #print line
+#     content = re.search(REG_CQI,line)
+#     if content:
        
-        rnti = int(content.group(2))
-        cell_id = int(content.group(3))
-        cell_cqi[cell_id][content.group(1)].append(int(content.group(5)))
-        ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
-        save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-CQI.csv",["Time","CQI","Ach.Rate","CellID_CQI"],content.group(1),content.group(5),content.group(4),cell_id)
+#         rnti = int(content.group(2))
+#         cell_id = int(content.group(3))
+#         cell_cqi[cell_id][content.group(1)].append(int(content.group(5)))
+#         ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
+#         save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-CQI.csv",["Time","CQI","Ach.Rate","CellID_CQI"],content.group(1),content.group(5),content.group(4),cell_id)
+
+# infile.close()
+
+infile = open(args._file_trace)
+header_line = infile.readline() 
+
+# NrDlCqiStats.txt
+# Time	RNTI	CellID	AchievableRate	WidebandCQI
+# 0.285	1	1	32000	15
+for line in infile:
+    parts = line.strip().split('\t')
+    if len(parts) != 5:
+        continue 
+    
+    time_str, rnti_str, cell_id_str, AchievableRate_str, cqi_str = parts
+    
+    cell_id = int(cell_id_str)
+    rnti = int(rnti_str)
+    time = time_str
+    cqi = float(cqi_str)
+    AchievableRate = int(AchievableRate_str)
+    
+    ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
+
+    cell_cqi[cell_id][time].append(cqi)
+
+    save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-CQI.csv",["Time","CQI","Ach.Rate","CellID_CQI"],time,cqi,AchievableRate,cell_id)
 
 
 infile.close()
+
 
 pf_cqi = pd.DataFrame(cell_cqi)
 fullname = os.path.join(args.output_path,"CELL_CQI.csv")

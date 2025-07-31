@@ -174,18 +174,19 @@ ReportUeMeasurementsCallback(
     }
 }
 
-std::ofstream outSinrFile("NrDlSinrStats.txt", std::ios::app);
-void
-DlDataSinrTracedCallback(uint16_t cellId, uint16_t rnti, double sinr, uint16_t bwpId)
-{
-    double sinrDb = 10 * std::log10(sinr);
-    outSinrFile << "Time: " << ns3::Simulator::Now().GetSeconds()
-                << " CellId: " << cellId
-                << " RNTI: " << rnti
-                << " SINR (dB): " << sinrDb
-                // << std::endl;
-                << "\n";
-}
+// std::ofstream outSinrFile("NrDlSinrStats.txt", std::ios::app);
+// void
+// DlDataSinrTracedCallback(uint16_t cellId, uint16_t rnti, double sinr, uint16_t bwpId)
+// {
+
+//     double sinrDb = 10 * std::log10(sinr);
+//     outSinrFile << "Time: " << ns3::Simulator::Now().GetSeconds()
+//                 << " CellId: " << cellId
+//                 << " RNTI: " << rnti
+//                 << " SINR (dB): " << sinrDb
+//                 // << std::endl;
+//                 << "\n";
+// }
 
 
 
@@ -194,15 +195,16 @@ main(int argc, char* argv[])
 {
     
     std::ofstream("NrDlCqiStats.txt", std::ios::trunc).close();
-    std::ofstream("NrDlSinrStats.txt", std::ios::trunc).close();
+    // std::ofstream("NrDlSinrStats.txt", std::ios::trunc).close();
     outCqiFile.open("NrDlCqiStats.txt");  
+    outCqiFile << "Time\tRNTI\tCellID\tAchievableRate\tWidebandCQI\n";
 
 
     bool logging = true; 
-    double simTime = 1000;    // in second
+    double simTime = 50;    // in second
 
     uint32_t nGnb = 1;
-    double nUes = 40;
+    double nUes = 2;
     double ueDiscRadius = 350; //The radius of the user distribution disc (in meters); all UEs will be randomly placed within this circle centered at the base station
     uint16_t outdoorUeMinSpeed = 15.0;
     uint16_t outdoorUeMaxSpeed = 20.0;
@@ -798,8 +800,8 @@ main(int argc, char* argv[])
     // clientApps.Stop(Seconds(simTime - 0.2));
 
     nrHelper->EnableTraces();
-    Config::ConnectWithoutContext("/NodeList/*/DeviceList/*/$ns3::NrNetDevice/$ns3::NrUeNetDevice/"
-                "ComponentCarrierMapUe/*/NrUePhy/DlDataSinr",MakeCallback(&DlDataSinrTracedCallback));
+    // Config::ConnectWithoutContext("/NodeList/*/DeviceList/*/$ns3::NrNetDevice/$ns3::NrUeNetDevice/"
+    //             "ComponentCarrierMapUe/*/NrUePhy/DlDataSinr",MakeCallback(&DlDataSinrTracedCallback));
 
     // Register callback for UE RRC connection established event
     Config::Connect("/NodeList/*/DeviceList/*/NrUeRrc/ConnectionEstablished",
@@ -831,7 +833,7 @@ main(int argc, char* argv[])
     std::cout << "Starting simulation..." << std::endl;
     Simulator::Run();
     std::cout << "Simulation finished." << std::endl;
-    outSinrFile.close();
+    // outSinrFile.close();
     outCqiFile.close();
 
 

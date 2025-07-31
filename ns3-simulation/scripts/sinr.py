@@ -20,8 +20,13 @@ from math import log10
 '''
 # Time: 0.278214 CellId: 1 RNTI: 1 SINR (dB): 53.9767
 # Time: 0.278214 CellId: 1 RNTI: 2 SINR (dB): 38.4138
-REG_SINR = r'Time:\s+([0-9]+\.[0-9]+)\s+CellId:\s+([0-9]+)\s+RNTI:\s+([0-9]+)\s+SINR\s+\(dB\):\s+([0-9]+\.[0-9]+)'
+# REG_SINR = r'Time:\s+([0-9]+\.[0-9]+)\s+CellId:\s+([0-9]+)\s+RNTI:\s+([0-9]+)\s+SINR\s+\(dB\):\s+([0-9]+\.[0-9]+)'
 
+# DLDataSinr.txt
+# Time	CellId	RNTI	BWPId	SINR(dB)
+# 0.278214	1	1	0	52.1445
+# 0.278214	1	2	0	32.7601
+# REG_SINR = r'([0-9]+\.?[0-9]*)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+)\s+([0-9]+\.?[0-9]*)'
 
 
 parser = ArgumentParser(description="Parsing the results for web client")
@@ -84,22 +89,45 @@ def save_metric_to_file(_path,_file_name,header,*values):
     f_out.close()   
 
 # print (args.output_path)
-infile = open(args._file_trace)
-for line in infile:
-    #print line
-    content = re.search(REG_SINR,line)
-    if content:
+# infile = open(args._file_trace)
+
+# for line in infile:
+#     #print line
+#     content = re.search(REG_SINR,line)
+#     if content:
        
-        rnti = int(content.group(3))
-        cell_id = int(content.group(2))
-        cell_sinr[cell_id][content.group(1)].append(float(content.group(4)))
-        ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
+#         rnti = int(content.group(3))
+#         cell_id = int(content.group(2))
+#         cell_sinr[cell_id][content.group(1)].append(float(content.group(5)))
+#         ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
+#         #sinr
+#         save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-SINR.csv",["Time","SINR","CellID_SINR"],content.group(1),content.group(5),cell_id)
 
+# infile.close()
 
-        #sinr
-        save_metric_to_file(args.output_path,"UE_"+str(ue_imsi)+"-SINR.csv",["Time","SINR","CellID_SINR"],content.group(1),content.group(4),cell_id)
+infile = open(args._file_trace)
+header_line = infile.readline() 
 
-        
+for line in infile:
+    parts = line.strip().split('\t')
+    if len(parts) != 5:
+        continue 
+    
+    time_str, cell_id_str, rnti_str, bwpid_str, sinr_str = parts
+    
+    cell_id = int(cell_id_str)
+    rnti = int(rnti_str)
+    time = time_str
+    sinr = float(sinr_str)
+    
+    ue_imsi = _cellid_and_rnti_to_imsi[cell_id][rnti]
+
+    cell_sinr[cell_id][time].append(sinr)
+
+    save_metric_to_file(args.output_path,
+                        "UE_" + str(ue_imsi) + "-SINR.csv",
+                        ["Time", "SINR", "CellID_SINR"],
+                        time, sinr_str, cell_id)
 
 infile.close()
 

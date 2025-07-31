@@ -177,16 +177,24 @@ NrMacSchedulerCQIManagement::DlWBCQIReported(const DlCqiInfo& info,
 
     
     // std::ofstream outCqiFile("NrDlCqiStats.txt", std::ios::app);  
-    outCqiFile << "Time: " << Simulator::Now().GetSeconds()
-            << " RNTI = " << ueInfo->m_rnti
-            << " CellID = " << GetCellId()
-            << " achievableRate = " << achievableRate
-            << " wideband CQI " << static_cast<uint32_t>(ueInfo->m_dlCqi.m_wbCqi)
-            << " reported"
-            // << std::endl;
-            << "\n";
+    // outCqiFile << "Time: " << Simulator::Now().GetSeconds()
+    //         << " RNTI = " << ueInfo->m_rnti
+    //         << " CellID = " << GetCellId()
+    //         << " achievableRate = " << achievableRate
+    //         << " wideband CQI " << static_cast<uint32_t>(ueInfo->m_dlCqi.m_wbCqi)
+    //         << " reported"
+    //         // << std::endl;
+    //         << "\n";
 
     // outCqiFile.close();
+
+    
+    outCqiFile << Simulator::Now().GetSeconds() << '\t'
+           << ueInfo->m_rnti << '\t'
+           << GetCellId() << '\t'
+           << achievableRate << '\t'
+           << static_cast<uint32_t>(ueInfo->m_dlCqi.m_wbCqi)
+           << '\n';
 
 
     // std::cout << "Time: " << Simulator::Now().GetSeconds()

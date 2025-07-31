@@ -44,9 +44,19 @@ def copy_logs(logs_location, save_path):
     trace_files = [logs_location+f for f in os.listdir(logs_location) if
                    os.path.isfile(os.path.join(logs_location, f))]
     os.system("mkdir -p %s"%save_path)
+    # keywords = ["Stats", "RxPacketTrace", "DlDataSinr"]
+    keywords = [
+        "NrDlCqiStats.txt",
+        "no-op-Stats.txt",
+        "NrDlPdcpStatsE2E.txt",
+        "RxPacketTrace.txt",
+        "DlDataSinr.txt"
+    ]
     for trace_file in trace_files:
-        # if "Stats" in trace_file:
-        if "Stats" in trace_file or "RxPacketTrace" in trace_file:
+        # if "Stats" in trace_file or "RxPacketTrace" in trace_file:
+        basename = os.path.basename(trace_file)
+        if basename in keywords:
+        # if any (k in trace_file for k in keywords):
             os.system("cp %s %s"%(trace_file, save_path))
             os.system("rm %s"%(trace_file))
             
@@ -81,7 +91,7 @@ def parse_phy(path_to_logs, out_path):
     # os.system("python3 scratch/scripts/phy.py -nu %d -f %s -op %s"%(num_ue, phy_log, phy_out_l))   
 
 def parse_sinr(path_to_logs, out_path):
-    sinr_log = os.path.join(path_to_logs, "NrDlSinrStats.txt") # nr
+    sinr_log = os.path.join(path_to_logs, "DlDataSinr.txt") # nr
     # print(sinr_log)
     mcs_out_l = os.path.join(out_path, "RAW/")
     os.system("mkdir -p %s"%mcs_out_l)
