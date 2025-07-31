@@ -1,5 +1,16 @@
 # Development Log (dev_log.md)
 
+
+## 2025-07-31
+**[ns3-simulation/5g_sim.cc]**
+**[ns3-simulation/nr-mac-scheduler-cqi-management.cc]**
+- Modified CQI output format from verbose descriptive text to concise tab-separated values for easier parsing.
+- Removed SINR logging and related output files; now using existing DLDataSinr.txt for SINR data processing
+
+**[ns3-simulation/scripts/sinr.py]**
+**[ns3-simulation/scripts/cqi.py]**
+- Updated parsing scripts for CQI and SINR metrics to use simple `split('\t')` line parsing instead of regex, leveraging the fixed tabular file format.
+
 ## 2025-07-29
 **[ns3-simulation/5g_sim.cc]**
 - Optimized SINR and CQI logging to reduce I/O overhead and simulation time.
