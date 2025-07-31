@@ -94,26 +94,15 @@ def summarize_parameters(df,metric,ue_prefix):
         
         
             if step_forward_time in new_pdf.index:
-            
-                # if type(new_pdf._get_value(step_forward_time,cellid)) is str:
-                if type(new_pdf.loc[step_forward_time,cellid]) is str:
-             
-                #  f_a = ''.join(new_pdf._get_value(step_forward_time,cellid)[1:-1].split()) 
-                #  f_a = ''.join(new_pdf.loc[step_forward_time,cellid][1:-1].split()) 
-                #  ff_a = list(map(float,f_a.split(',')))
-                 val = new_pdf.loc[step_forward_time,cellid]
-                 ff_a = list(map(float, ast.literal_eval(val)))
+                val = new_pdf.loc[step_forward_time,cellid]
+                if isinstance(val, str):
+                    f_a = list(map(float, ast.literal_eval(val)))
                  #print ff_a
             elif step_back_time in new_pdf.index:
-            
-                # if type(new_pdf._get_value(step_back_time,cellid)) is str:
-                if type(new_pdf.loc[step_back_time,cellid]) is str:
-                #  f_a = ''.join(new_pdf._get_value(step_back_time,cellid)[1:-1].split()) 
-                # f_a = ''.join(new_pdf.loc[step_back_time,cellid][1:-1].split()) 
-                #  ff_a = list(map(float,f_a.split(',')))
-                    val = new_pdf.loc[step_back_time,cellid]
+                val = new_pdf.loc[step_back_time,cellid]
+                if isinstance(val, str):
                     ff_a = list(map(float, ast.literal_eval(val)))
-                 #print ff_a
+
         fin = fin + ff_a
         if len(fin) > 0:
             final_value = np.mean(fin)
