@@ -5,6 +5,7 @@ import numpy as np
 import math
 import csv
 import ast
+import multiprocessing as MP
 parser = ArgumentParser(description="Taking all the performance metrics from competing UEs at the same cell")
 
 
@@ -66,7 +67,9 @@ def summarize_parameters(df,metric,ue_prefix):
         curr_time = row[1]
         cellid = str(row[-1])
         val = new_pdf.loc[curr_time,cellid]
-        fin = list(map(float, ast.literal_eval(val)))
+        dd = ''.join(val[1:-1].split())
+        fin = list(map(float, dd.split(',')))
+        # fin = list(map(float, ast.literal_eval(val)))
         fin = np.around(fin,decimals=3).tolist()
         cqi_curr = np.around(float(row[2]),decimals=3)
         #print cqi_curr
@@ -86,12 +89,16 @@ def summarize_parameters(df,metric,ue_prefix):
             if step_forward_time in new_pdf.index:
                 val = new_pdf.loc[step_forward_time,cellid]
                 if isinstance(val, str):
-                    f_a = list(map(float, ast.literal_eval(val)))
+                    f_a = ''.join(val[1:-1].split())
+                    ff_a = list(map(float, f_a.split(',')))
+                    # ff_a = list(map(float, ast.literal_eval(val)))
                  #print ff_a
             elif step_back_time in new_pdf.index:
                 val = new_pdf.loc[step_back_time,cellid]
                 if isinstance(val, str):
-                    ff_a = list(map(float, ast.literal_eval(val)))
+                    f_a = ''.join(val[1:-1].split())
+                    ff_a = list(map(float, f_a.split(',')))
+                    # ff_a = list(map(float, ast.literal_eval(val)))
 
         fin = fin + ff_a
         if len(fin) > 0:
@@ -99,13 +106,10 @@ def summarize_parameters(df,metric,ue_prefix):
         else:
             final_value = 0
         save_metric_to_file(args.output_path,ue_prefix+"C"+metric+".csv",["Time","CellID_"+metric,"C"+metric],curr_time,cellid,final_value)
-            
-for i in range(int(args.num_ue)):
-    
 
+
+def process_ue(i):
     ue_prefix = "UE_" + str(i+1) +"-"
-    f_names = []
-    # parse metrics of interest
     metrics = args._metrics.split(',')
     
     for metric in metrics:
@@ -115,6 +119,24 @@ for i in range(int(args.num_ue)):
         if os.path.exists(fullname):
             pdf = pd.read_csv(fullname)
             summarize_parameters(pdf,metric,ue_prefix)
-            
 
+
+# for i in range(int(args.num_ue)):
+#     ue_prefix = "UE_" + str(i+1) +"-"
+#     f_names = []
+#     # parse metrics of interest
+#     metrics = args._metrics.split(',')
+    
+#     for metric in metrics:
+#         name = ue_prefix + metric + '.csv'
+#         fullname = os.path.join(args.dir_path,name)
+          
+#         if os.path.exists(fullname):
+#             pdf = pd.read_csv(fullname)
+#             summarize_parameters(pdf,metric,ue_prefix)
+            
+if __name__ == '__main__':
+    num_ues = int(args.num_ue)
+    with MP.Pool(MP.cpu_count()-3) as pool:
+        pool.map(process_ue, range(num_ues))
     
