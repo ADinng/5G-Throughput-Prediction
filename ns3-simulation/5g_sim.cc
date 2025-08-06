@@ -88,7 +88,8 @@ void CalculateThroughput(uint16_t inter)
         double curRx = sink->GetTotalRx();
         double cur = ((curRx - lastTotalRx[u]) * 8.0) / ((double)inter/1000);
         //double avg = (curRx * 8.0) / now.GetSeconds ();     /* Convert Application RX Packets to MBits. */
-        std::cout <<"Time: "<< now.GetSeconds () <<" UE "<<idd<< " Current Throughput: " << cur << " bit/s" << std::endl;
+        std::cout <<"Time: "<< now.GetSeconds () <<" UE "<<idd<< " Current Throughput: " << cur << " bit/s" << "\n";
+        // std::cout <<"Time: "<< now.GetSeconds () <<" UE "<<idd<< " Current Throughput: " << cur << " bit/s" << std::endl;
         //std::cout <<"Time: "<< now.GetSeconds () <<" UE "<<u<<" Average Throughput: " << avg << " bit/s" << std::endl;
         lastTotalRx[u] = curRx;
     }
@@ -201,19 +202,19 @@ main(int argc, char* argv[])
 
 
     bool logging = true; 
-    double simTime = 50;    // in second
+    double simTime = 1000;    // in second
 
     uint32_t nGnb = 1;
-    double nUes = 2;
-    double ueDiscRadius = 350; //The radius of the user distribution disc (in meters); all UEs will be randomly placed within this circle centered at the base station
+    double nUes = 60;
+    double ueDiscRadius = 300; //The radius of the user distribution disc (in meters); all UEs will be randomly placed within this circle centered at the base station
     uint16_t outdoorUeMinSpeed = 15.0;
     uint16_t outdoorUeMaxSpeed = 20.0;
     // set mobility model: steady, gauss
     std::string mobilityType = "gauss";
 
     double frequency = 3.5e9; 
-    double bandwidth = 50e6; 
-    double txPower = 30; // txPower
+    double bandwidth = 100e6; 
+    double txPower = 40; // txPower
     double ueTxPower = 23;
     bool enableHarqRetx = true; //Enable or disable HARQ retransmissions in the scheduler
     uint16_t numerology = 0;
@@ -228,8 +229,8 @@ main(int argc, char* argv[])
     double hUT=1.5; 
 
     bool enableNoiseFigure = true;
-    double gnbNoiseFigure = 7.0;
-    double ueNoiseFigure = 10.0;
+    double gnbNoiseFigure = 5.0;
+    double ueNoiseFigure = 7.0;
 
     bool useFixedMcs = false;
 
@@ -249,16 +250,17 @@ main(int argc, char* argv[])
     bool enableMimoFeedback = false;
     uint32_t ueNumRows = 1;
     uint32_t ueNumColumns = 1;
-    bool ueIsoAntennaModel = true;
+    bool ueIsoAntennaModel = false;
 
-    uint32_t gnbNumRows = 1;
-    uint32_t gnbNumColumns = 2;
+    uint32_t gnbNumRows = 4;
+    uint32_t gnbNumColumns = 8;
     bool gNbIsoAntennaModel = true;
 
-    bool enableGnbAntennaArrayConfig = true;
+    bool enableGnbAntennaArrayConfig = false;
     double gnbHSpacing = 0.5;
     double gnbVSpacing = 0.8;
     double downtiltAngle = 3.0;
+
 
     NrHelper::MimoPmiParams mimoPmiParams;
     mimoPmiParams.pmSearchMethod = "ns3::NrPmSearchFull";
