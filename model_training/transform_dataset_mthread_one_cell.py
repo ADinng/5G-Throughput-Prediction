@@ -204,7 +204,7 @@ if __name__ == "__main__" :
 
     make_new_logs_partial = partial(make_new_logs, config=config)
 
-    with MP.Pool(MP.cpu_count()) as p:
-        print("COUNT: ", MP.cpu_count())
+    with MP.Pool(MP.cpu_count()-2 ) as p:
+        print("COUNT: ", MP.cpu_count()-2 )
         # p.map(make_new_logs, meas_traces)
         p.map(make_new_logs_partial, meas_traces)

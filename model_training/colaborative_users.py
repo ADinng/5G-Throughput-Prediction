@@ -4,6 +4,7 @@ import re
 import random 
 import pandas as pd
 import numpy as np
+import warnings
 
 
 
@@ -56,7 +57,9 @@ def calc_stats(pdf_, list_pdfs):
           
            if not sliced_pdf["Tx"].isnull().any():
               
-               df = pd.concat([df, sliced_pdf[feat_list]], ignore_index=True)
+               with warnings.catch_warnings():
+                   warnings.simplefilter(action='ignore', category=FutureWarning)
+                   df = pd.concat([df, sliced_pdf[feat_list]], ignore_index=True)
         
         
         #print (df)

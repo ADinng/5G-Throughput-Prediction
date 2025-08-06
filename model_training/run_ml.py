@@ -3,6 +3,7 @@ from collections import defaultdict
 import multiprocessing as MP
 from functools import partial
 from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
@@ -11,7 +12,7 @@ import re
 import random
 import matplotlib.pyplot as plt
 # regex for the trace logs UE_1-comb_N5_R1_H5F5_cleaned
-REG_MEASUREMENT_TRACE = r"(UE[0-9]+).*_H([0-9]+)F([0-9]+)_cleaned.*\.csv" # UE1_C1_N1_S2_P1_final_CMP1_H5F5_cleaned
+# REG_MEASUREMENT_TRACE = r"(UE[0-9]+).*_H([0-9]+)F([0-9]+)_cleaned.*\.csv" # UE1_C1_N1_S2_P1_final_CMP1_H5F5_cleaned
 REG_MEASUREMENT_TRACE = r"(UE_[0-9]+).*_H([0-9]+)F([0-9]+)_cleaned.*\.csv" # UE_1_C1_N1_S2_P1_final_CMP1_H5F5_cleaned
 
 
@@ -43,7 +44,7 @@ def list_traces(folder_path, rx):
     horizon_ = 0
     for _file in os.listdir(directory):
          filename = os.fsdecode(_file)
-         print(filename, rx)
+        #  print(filename, rx)
          if re.search(rx, filename):
              
              match = re.search(rx, filename)
@@ -55,6 +56,7 @@ def list_traces(folder_path, rx):
 def run_ml_model(trace, feat_remove):
     
     reg2 = ExtraTreesRegressor(random_state=1)
+    # reg2 = RandomForestRegressor(random_state=1)
     r_pdf = pd.read_csv(trace)
     # drop Drop column
     r_pdf.drop(['Drop'], axis=1, inplace=True)
@@ -82,6 +84,7 @@ def run_ml_model(trace, feat_remove):
 
 def run_ml_model_all_users(train_d, val_d):
     reg2 = ExtraTreesRegressor(random_state=1, n_jobs=-1)
+    # reg2 = RandomForestRegressor(random_state=1, n_jobs=-1)
 
     y_train = train_d[args.target_metric]
     X_train = train_d.drop(args.target_metric, axis="columns")

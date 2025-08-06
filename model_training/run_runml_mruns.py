@@ -10,11 +10,11 @@ parser.add_argument("--output_path", help="Path where to save transformed files"
 
 # cmps = [10, 50]
 
-runs = [1]
-cmps = [100]
+# runs = [1]
+# cmps = [100]
 
-# runs = [1,2,3,4,5,6,7,8,9,10]
-# cmps = [10, 50]
+runs = [1,2,3,4,5,6,7,8,9,10]
+cmps = [10, 50]
 
 
 history = 5
