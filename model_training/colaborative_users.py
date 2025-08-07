@@ -5,6 +5,7 @@ import random
 import pandas as pd
 import numpy as np
 import warnings
+import multiprocessing as MP
 
 
 
@@ -108,6 +109,32 @@ def calc_stats(pdf_, list_pdfs):
     pdf_["Active_Users"] = pdf_["Active_Users"].fillna(0)
     return pdf_
 
+def process_trace_for_user(args_tuple):
+    meas_trace, meas_traces, total_num_users, percent_comp_users, run_, output_path = args_tuple
+
+    list_users_id = list(range(1,total_num_users+1) )
+    match = re.search(REG_FILTER_USER, meas_trace)
+    curr_user = int(match.group(1) )
+    
+    # remove current user from the list
+    list_users_id.remove(curr_user)
+    # get competing users id    
+    num_competing = ((total_num_users-1) * int(percent_comp_users))//100
+    colaborative_users_id = random.sample(list_users_id, k=num_competing)
+    print("competing users for user %d are"%curr_user, colaborative_users_id)
+    
+    comp_pdfs_list = prepare_pdf_comp_users(meas_traces, colaborative_users_id)
+    curr_pdf = pd.read_csv(meas_trace)
+    # get stats
+    modified_pdf = calc_stats(curr_pdf, comp_pdfs_list)
+    
+    filename_f = meas_trace.split("/")[-1].split(".")[0] + "_C" + str(percent_comp_users) + "_R"+str(run_+1)+"_UE"+str(total_num_users)+"_P0_final.csv"
+    print(filename_f)
+
+    dir_path = os.path.join(output_path, "CMP" + str(percent_comp_users), "Run_%d"%(run_+1))
+    os.system("mkdir -p %s"%dir_path)
+    modified_pdf.to_csv(os.path.join(dir_path, filename_f), index = False)
+      
 if __name__ == "__main__" :
   args = parser.parse_args()
   
@@ -116,31 +143,39 @@ if __name__ == "__main__" :
   
   for run_ in range(int(args.num_runs)):
     random.seed(int(run_))
-    for meas_trace in meas_traces:
-      
+    tasks = [
+        (meas_trace, meas_traces, total_num_users, int(args.percent_comp_users), run_, args.output_path)
+        for meas_trace in meas_traces
+    ]
 
-      list_users_id = list(range(1,total_num_users+1) )
-      match = re.search(REG_FILTER_USER, meas_trace)
-      curr_user = int(match.group(1) )
-     
-      # remove current user from the list
-      list_users_id.remove(curr_user)
-      # get competing users id    
-      num_competing = ((total_num_users-1) * int(args.percent_comp_users))//100
-      colaborative_users_id = random.sample(list_users_id, k=num_competing)
-      print("competing users for user %d are"%curr_user, colaborative_users_id)
-      
-      comp_pdfs_list = prepare_pdf_comp_users(meas_traces, colaborative_users_id)
-      curr_pdf = pd.read_csv(meas_trace)
-      # get stats
-      modified_pdf = calc_stats(curr_pdf, comp_pdfs_list)
-      
-      filename_f = meas_trace.split("/")[-1].split(".")[0] + "_C" + str(args.percent_comp_users) + "_R"+str(run_+1)+"_UE"+str(total_num_users)+"_P0_final.csv"
-      print(filename_f)
+    with MP.Pool(MP.cpu_count()-2 ) as p:
+        print("COUNT: ", MP.cpu_count()-2 )
+        p.map(process_trace_for_user, tasks)
     
-      dir_path = os.path.join(args.output_path, "CMP" + str(args.percent_comp_users), "Run_%d"%(run_+1))
-      os.system("mkdir -p %s"%dir_path)
-      modified_pdf.to_csv(os.path.join(dir_path, filename_f), index = False)
+    # for meas_trace in meas_traces:
+      
+    #   list_users_id = list(range(1,total_num_users+1) )
+    #   match = re.search(REG_FILTER_USER, meas_trace)
+    #   curr_user = int(match.group(1) )
+     
+    #   # remove current user from the list
+    #   list_users_id.remove(curr_user)
+    #   # get competing users id    
+    #   num_competing = ((total_num_users-1) * int(args.percent_comp_users))//100
+    #   colaborative_users_id = random.sample(list_users_id, k=num_competing)
+    #   print("competing users for user %d are"%curr_user, colaborative_users_id)
+      
+    #   comp_pdfs_list = prepare_pdf_comp_users(meas_traces, colaborative_users_id)
+    #   curr_pdf = pd.read_csv(meas_trace)
+    #   # get stats
+    #   modified_pdf = calc_stats(curr_pdf, comp_pdfs_list)
+      
+    #   filename_f = meas_trace.split("/")[-1].split(".")[0] + "_C" + str(args.percent_comp_users) + "_R"+str(run_+1)+"_UE"+str(total_num_users)+"_P0_final.csv"
+    #   print(filename_f)
+    
+    #   dir_path = os.path.join(args.output_path, "CMP" + str(args.percent_comp_users), "Run_%d"%(run_+1))
+    #   os.system("mkdir -p %s"%dir_path)
+    #   modified_pdf.to_csv(os.path.join(dir_path, filename_f), index = False)
       
       
   
