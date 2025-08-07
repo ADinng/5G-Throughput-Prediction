@@ -1,5 +1,7 @@
 # Development Log (dev_log.md)
-
+## 2025-08-07
+**[model_training/colaborative_users.py]**
+- Add multi-core CPU support.
 
 ## 2025-07-31
 **[ns3-simulation/5g_sim.cc]**
