@@ -8,6 +8,7 @@ import csv
 import pandas as pd
 import json
 from math import log10
+from pathlib import Path
 '''Script for parsing UE performance metrics (RSRP/SINR)
 
     Created by Xingmei Ding, Computer Science, UCC, 23.07.2016.
@@ -55,8 +56,9 @@ args = parser.parse_args()
 
 _cellid_and_rnti_to_imsi = defaultdict(lambda : defaultdict(int))
 
-def load_mapping():
-    with open('scratch/scripts/ue_mapping.json', 'r') as f:
+def load_mapping(mapping_file_path):
+    # with open('scratch/scripts/ue_mapping.json', 'r') as f:
+    with open(mapping_file_path, 'r') as f:
         mapping_data = json.load(f)
     _cellid_and_rnti_to_imsi.clear()
     for cell_id, rnti_dict in mapping_data['cellid_and_rnti_to_imsi'].items():
@@ -64,7 +66,8 @@ def load_mapping():
         for rnti, imsi in rnti_dict.items():
             _cellid_and_rnti_to_imsi[cell_id][int(rnti)] = int(imsi)
 
-load_mapping()
+mapping_file_path = Path(args.output_path) / 'ue_mapping.json'
+load_mapping(mapping_file_path)
 
 cell_sinr = defaultdict(lambda : defaultdict(list))
 

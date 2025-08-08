@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 import csv
 import pandas as pd
 import json
+from pathlib import Path
 
 '''Script for parsing UE performance metrics (throughput, CQI, SNR...)
 
@@ -302,18 +303,20 @@ fullname = os.path.join(args.output_path,"CELL_THR.csv")
 pf_thr.to_csv(fullname,sep=';')
 
 
-def save_mapping():
+def save_mapping(mapping_file_path):
     mapping_data = {
         'cellid_and_rnti_to_imsi': {
             str(cell_id): {str(rnti): imsi for rnti, imsi in rnti_dict.items()}
             for cell_id, rnti_dict in _cellid_and_rnti_to_imsi.items()
         }
     }
-    with open('scratch/scripts/ue_mapping.json', 'w') as f:
+    # with open('scratch/scripts/ue_mapping.json', 'w') as f:
+    mapping_file_path.parent.mkdir(parents=True, exist_ok=True)  
+    with open(mapping_file_path, 'w') as f:
         json.dump(mapping_data, f)
 
-
-save_mapping() 
+mapping_file_path = Path(args.output_path) / 'ue_mapping.json'
+save_mapping(mapping_file_path) 
 
 #print _cellid_and_rnti_to_imsi[12]
 #print ue_counter
