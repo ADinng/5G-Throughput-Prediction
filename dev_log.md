@@ -5,6 +5,9 @@
 - Change the output file path of ue_mapping.json to output_path/RAW.
 - Generated requirements.txt
 
+**[Docker}]**
+- build a Docker Image (ns3-simulation: 5g_sim.cc and scripts)
+
 ## 2025-08-07
 **[model_training/colaborative_users.py]**
 - Add multi-core CPU support.
