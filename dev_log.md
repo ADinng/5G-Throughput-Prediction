@@ -1,4 +1,10 @@
 # Development Log (dev_log.md)
+
+## 2025-08-08
+**[ns3-simulation/scripts/{cqi.py,phy.py,UE_parsing.py,sinr.py,}]**
+- Change the output file path of ue_mapping.json to output_path/RAW.
+- Generated requirements.txt
+
 ## 2025-08-07
 **[model_training/colaborative_users.py]**
 - Add multi-core CPU support.
