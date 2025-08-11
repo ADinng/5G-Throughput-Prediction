@@ -6,6 +6,8 @@ parser.add_argument("--folder_path", help="Path to folder with files")
 parser.add_argument("--output_path", help="Path where to save transformed files")
 parser.add_argument("--cmps_mode", type=str, default="100",
                     help="100: runs=[1], cmps=[100]; 1050: runs=[1..10], cmps=[10,50]")
+parser.add_argument("--history", type=int, default=5, help="History length")
+parser.add_argument("--horizon", type=int, default=5, help="Horizon length")
 
 # runs = [1,2,3,4,5]
 
@@ -18,12 +20,15 @@ parser.add_argument("--cmps_mode", type=str, default="100",
 # cmps = [10, 50]
 
 
-history = 5
-horizon = 5
+# history = 5
+# horizon = 5
 
 
 if __name__ == "__main__":
   args = parser.parse_args()
+
+  history = args.history
+  horizon = args.horizon
 
   if args.cmps_mode == "100":
     runs = [1]
