@@ -49,10 +49,17 @@ ready_for_training/
 
 ## Data Flow
 1. **Simulation:**
-   - Run `5g_sim.cc` in `ns3-simulation/` to generate raw per-user log files.
+   - Run `ns3-simulation/5g_sim.cc` to generate raw per-user log files.
 2. **Log Parsing and Aggregation:**
-   - Run `ns3-simulation/scripts/parse_logs.py` to process and combine the raw logs into CSV files.
-   - The intermediate and combined CSV files are stored in `5g_script_output/`.
+   - Run the following command to process and combine the raw logs into CSV files:
+     ```bash
+     python3 ns3-simulation/scripts/parse_logs.py --path ./ --opath ./5g_script/ns3_ue20_100s_onoff --num_ue 20 --sim_time 99
+     ```
+     - `--path`: Input directory containing raw logs (usually `./`)
+     - `--opath`: Output directory for processed CSV files (e.g., `./5g_script/ns3_ue20_100s_onoff`)
+     - `--num_ue`: Number of user equipments (UEs), e.g., 20
+     - `--sim_time`: Simulation time (if simulation is 100 seconds, set to 99)
+   - The intermediate and combined CSV files are stored in the specified output directory.
 3. **Collaborative Feature Generation:**
    - Run `model_training/colaborative_users.py` to compute collaborative statistics and output to `dataset_network/`.
 4. **Time-Series Dataset Preparation:**
@@ -67,21 +74,41 @@ ready_for_training/
 1. **Run ns-3 Simulation**
    - Compile and run `5g_sim.cc` in the `ns3-simulation` directory to generate raw per-user log files.
 2. **Process Data**
-   - Use the scripts in `scripts/model_training/` to process the raw logs:
+   - Use the scripts in `ns3-simulation/scripts` to process the raw logs:
+     - Generate combine data
+       ```bash
+       python3 scratch/scripts/parse_logs.py --path ./ --opath ./5g_script/ns3_ue40_1000s_onoff  --num_ue 40 --sim_time 999
+       ```
+   - Use the scripts in `model_training/` to process the combine data:
      - Generate collaborative features:
        ```bash
+       python colaborative_users.py --folder_path <input_log_folder> --output_path ../dataset_network/ --percent_comp_users 10 --num_runs 10
        python colaborative_users.py --folder_path <input_log_folder> --output_path ../dataset_network/ --percent_comp_users 50 --num_runs 10
+       python colaborative_users.py --folder_path <input_log_folder> --output_path ../dataset_network/ --percent_comp_users 100 --num_runs 1
+       ```
+       example
+       ```bash
+       python model_training/colaborative_users.py --folder_path ./5g_script_output/ns3_ue20_1000s_onoff/combine/1s --output_path ./dataset_network/ --percent_comp_users 100 --num_runs 1
        ```
      - Generate time-series samples:
        ```bash
        python transform_dataset_mthread_one_cell.py --folder_path ../dataset_network/ --output_path ../ready_for_training/ --target_metric THR --history 10 --horizon 1 --active_only True
        ```
 3. **Train ML Models**
-   - Use the processed datasets in `ready_for_training/` for your machine learning experiments.
+   - Use the processed datasets in `model_training/` for machine learning experiments. (run_ml.py and run_runml_mruns.py)
+    - Activate user case:
+       ```bash
+       python model_training/run_runml_mruns.py --folder_path ./ready_for_training_on_network_H5H5/ --output_path ./results_ml_on_network/ --cmps_mode 100
+       python model_training/run_runml_mruns.py --folder_path ./ready_for_training_on_network_H5H5/ --output_path ./results_ml_on_network/ --cmps_mode 1050
+       ```
+    - Inactivate user case:
+       ```bash
+       python model_training/run_runml_mruns.py --folder_path ./ready_for_training_off_network_H5H5/ --output_path ./results_ml_off_network/ --cmps_mode 100
+       python model_training/run_runml_mruns.py --folder_path ./ready_for_training_off_network_H5H5/ --output_path ./results_ml_off_network/ --cmps_mode 1050
+       ```
+
 
 ## Notes
 - The 5G simulation does **not** collect `PDCP_Throughput` and `Delay` metrics, so these features are not included in the collaborative statistics.
 - All scripts are designed to be modular and can be adapted for different simulation setups or feature requirements.
 
-## Contact
-For questions or contributions, please open an issue or contact the maintainer.
