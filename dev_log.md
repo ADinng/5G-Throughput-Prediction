@@ -1,5 +1,11 @@
 # Development Log (dev_log.md)
 
+
+## 2025-08-11
+**[model_training/run_runml_mruns.py]**
+- Add command-line option --cmps_mode to select cooperation ratio mode (100% or 10% & 50%)..
+
+
 ## 2025-08-08
 **[ns3-simulation/scripts/{cqi.py,phy.py,UE_parsing.py,sinr.py,}]**
 - Change the output file path of ue_mapping.json to output_path/RAW.
