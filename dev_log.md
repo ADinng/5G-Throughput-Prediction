@@ -3,7 +3,9 @@
 
 ## 2025-08-11
 **[model_training/run_runml_mruns.py]**
+**[model_training/run_transf_mruns.py]**
 - Add command-line option --cmps_mode to select cooperation ratio mode (100% or 10% & 50%)..
+- Add command-line option to set history and horizon
 
 
 ## 2025-08-08
